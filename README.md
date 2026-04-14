@@ -22,14 +22,41 @@ Movebank GPS  ──┐
 ERA5 Climate  ──┘
 ```
 
-| 단계 | 처리 내용 |
-|------|-----------|
-| **Preprocessing** | GPS 노이즈 제거 (Kalman Filter) → 균일 경로 생성 (Cubic Spline) → ERA5 기후 데이터 시간 매핑 |
-| **Predictor** | GPS + 기후 데이터 (풍속·풍향·기온·지형) 공동 학습. Monte Carlo Dropout으로 후보 경로 50개 생성 |
-| **XAI** | SHAP으로 각 환경변수의 경로 선택 기여도 수치화. 프레임 단위 출력 |
-| **Boids** | AI 예측 경로를 리더로 삼아 파티클 군집 시뮬레이션 (Separation · Alignment · Cohesion) |
-| **Server** | FastAPI WebSocket, 30fps 스트리밍. 관객 조작 수신 → 예측 재실행 → 경로 + SHAP 갱신 |
-| **Unity** | VFX Graph GPU 파티클 렌더링. 색상·밝기를 SHAP 기여도에 매핑 |
+| 단계 | 입력 | 출력 |
+|------|------|------|
+| **Preprocessing** | GPS raw CSV · ERA5 기후 데이터 | 균일 경로 · 시간 정렬된 환경 데이터 |
+| **Predictor** | 전처리 경로 · 환경 데이터 | 후보 경로 50개 · 경로별 확률 |
+| **XAI** | 예측 결과 · 입력 feature | 프레임별 feature 기여도 (SHAP) |
+| **Boids** | 예측 경로 (리더) | 파티클 군집 위치 |
+| **Server** | 파티클 위치 · SHAP · 후보 경로 | WebSocket 30fps 스트림 |
+| **Unity** | WebSocket 수신 · 관객 조작 입력 | 렌더링 · 조작값 서버 전송 |
+
+---
+
+## Structure
+
+```
+bird-migration-xai/
+├── contracts/              팀 간 인터페이스 계약
+│   ├── data_schema.md      전처리 출력 포맷 · 예측 모델 입출력
+│   └── websocket_schema.md Server ↔ Unity 메시지 포맷
+│
+├── data/                   데이터 수집 및 전처리
+│   ├── preprocessing/      Kalman 필터 · Spline 보간 · ERA5 시간 매핑
+│   ├── raw/                Movebank 원본 CSV (git 제외)
+│   └── processed/          전처리 완료 데이터 (git 제외)
+│
+├── model/                  AI 모델
+│   ├── predictor/          경로 예측 (LSTM + Monte Carlo Dropout)
+│   ├── boids/              군집 시뮬레이션 (Boids)
+│   ├── xai/                설명 가능한 AI (SHAP)
+│   ├── weights/            모델 가중치 (git 제외)
+│   └── checkpoints/        학습 체크포인트 (git 제외)
+│
+├── server/                 FastAPI WebSocket 서버
+├── render/                 Unity VFX Graph 렌더링 · 인터랙션
+└── idea/                   기획 문서
+```
 
 ---
 
