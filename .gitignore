@@ -1,0 +1,46 @@
+# =====================
+# Data (LFS 미사용 - 대용량 파일 제외)
+# =====================
+data/raw/
+data/processed/
+
+# =====================
+# Python
+# =====================
+__pycache__/
+*.py[cod]
+*.pyo
+.venv/
+venv/
+.env
+*.egg-info/
+dist/
+build/
+.pytest_cache/
+
+# AI 모델 가중치 (대용량)
+model/checkpoints/
+model/weights/
+*.pt
+*.pth
+*.ckpt
+*.pkl
+
+# Jupyter
+.ipynb_checkpoints/
+*.ipynb
+
+# =====================
+# Unity
+# =====================
+render/Library/
+render/Temp/
+render/obj/
+render/Build/
+render/Builds/
+render/Logs/
+render/UserSettings/
+render/*.suo
+render/*.csproj
+render/*.sln
+render/.vs/
