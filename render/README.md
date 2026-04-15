@@ -33,17 +33,17 @@ Packages/ - 패키지 의존성
 
 ## 인풋
 
-```selected_paths```:선두 기러기가 최종적으로 선택한 경로의 좌표값
-```predicted_paths```:후보 경로 n개의 좌표군(xai)
-```shap_values```: 각 환경 변수(풍향, 풍속, 기류)의 현재 경로 기여도 수치(xai)
-```boids_params```: 보이드 알고리즘으로 계산된 군집의 상태
-```user_input```: 풍속값을 변경하기 위해 유저가 인터랙션한 데이터
+```selected_paths```:선두 기러기가 최종적으로 선택한 경로의 좌표값<br>
+```predicted_paths```:후보 경로 n개의 좌표군(xai)<br>
+```shap_values```: 각 환경 변수(풍향, 풍속, 기류)의 현재 경로 기여도 수치(xai)<br>
+```boids_params```: 보이드 알고리즘으로 계산된 군집의 상태<br>
+```user_input```: 풍속값을 변경하기 위해 유저가 인터랙션한 데이터<br><br>
 
 ## 출력
 
-```wind_speed```: 유저에 의해 결정된 풍속값
-```timestamp```: 실시간 데이터 전송을 위한 timestamp
-전시환경에 따라 대형 프로젝션 맵핑을 위한 후처리를 한 후 프로젝터에 영상을 넘긴다
+```wind_speed```: 유저에 의해 결정된 풍속값<br>
+```timestamp```: 실시간 데이터 전송을 위한 timestamp<br>
+전시환경에 따라 대형 프로젝션 맵핑을 위한 후처리를 한 후 프로젝터에 영상을 넘긴다<br><br>
 
 
 # 기술 사양 및 파이프 라인
@@ -52,10 +52,16 @@ Packages/ - 패키지 의존성
 
 수신된 비정형 데이터는 VFX Property Binder 를 통해 VFX Graph의 내부 변수와 1:1로 매핑
 
+
+
 ## 데이터 송수신
 
 FAST API로 처리하되, ONNX 형식 모델로 내보낼 수 있다면 유니티 내부의 AI 기능 활용
 
+
+
 ## 후처리
 
 Touch Designer 등을 사용할 수 있음
+
+
