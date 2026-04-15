@@ -33,13 +33,13 @@ model/weights/
 # =====================
 # Unity
 # =====================
-render/Library/
-render/Temp/
-render/obj/
-render/Build/
-render/Builds/
-render/Logs/
-render/UserSettings/
+render/*/Library/
+render/*/Temp/
+render/*/obj/
+render/*/Build/
+render/*/Builds/
+render/*/Logs/
+render/*/UserSettings/
 render/*.suo
 render/*.csproj
 render/*.sln
