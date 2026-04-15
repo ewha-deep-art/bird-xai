@@ -4,3 +4,20 @@
 
 서버로부터 WebSocket으로 수신한 데이터를 VFX Graph로 실시간 시각화하고,
 관객의 인터랙션을 처리해 서버에 전달합니다.
+
+render/
+├── Assets/
+│   ├── Scenes/             메인 전시 Scene (환경 및 조명 설정)
+│   ├── VFX/                시각화 (VFX Graph 에셋)
+│   │   ├── XAI-UI/         - 기러기 군집 및 경로 시각화 로직
+│   │   └── Interaction-UI/ - 인터랙션 피드백 효과
+│   ├── Scripts/            통신 및 데이터 바인딩
+│   │   ├── Network/        - WebSocket 클라이언트 (FastAPI 연동)
+│   │   ├── Interaction/    - 관객 입력 처리 (풍속 조절 로직)
+│   │   └── Mapping/        - AI 데이터를 VFX 파라미터로 변환
+│   ├── Materials/          URP 기반 셰이더 및 재질
+│   └── Prefabs/            기러기 모델 및 주요 오브젝트
+├── PostProcess             영상 후처리
+├── Packages/               사용된 패키지 의존성 (URP, VFX Graph 등)
+└── README.md    
+
