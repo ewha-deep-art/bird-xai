@@ -18,7 +18,7 @@
 - **입력**: 철새 각각의 gps 데이터나 이동 경로(시간, 위치)
 - **출력**: 철새 군집의 이동 영상
 
-![idea.png](/home/nagyeop/bird-migration-xai/idea.png)
+![idea.png](idea.png)
 
 ## 단계별 데이터 처리 방법
 
