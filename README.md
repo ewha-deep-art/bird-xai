@@ -4,7 +4,7 @@ Bird XAI는 철새의 GPS 이동 데이터와 기후 데이터를 함께 분석�
 
 이 프로젝트는 하나의 정답 경로를 제시하기보다, 자연 현상을 데이터와 모델로 해석하는 과정이 얼마나 가변적이고 불확실한지를 드러내는 데 초점을 둡니다. 예측 경로, 후보 경로, 설명 값, 군집 움직임, 실시간 렌더링이 하나의 파이프라인으로 연결되어 작품의 핵심 경험을 만듭니다.
 
-![idea preview](idea/idea_v2.png)
+![idea preview](docs/idea_v2.png)
 
 ## 프로젝트 흐름
 
@@ -35,7 +35,7 @@ Movebank GPS + ERA5 Climate
 
 | 경로 | 설명 |
 |---|---|
-| [idea/README.md](idea/README.md) | 작품 기획, 시각적 레퍼런스, 개념 문서 |
+| [docs/README.md](docs/README.md) | 작품 기획, 시각적 레퍼런스, 개념 문서 |
 | [data/README.md](data/README.md) | 원본 데이터와 전처리 산출물 저장 구조 |
 | [ai/README.md](ai/README.md) | AI 파이프라인 전체 구조 |
 | [ai/training/README.md](ai/training/README.md) | 학습 phase 설명 |
