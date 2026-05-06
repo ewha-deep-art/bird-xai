@@ -19,8 +19,8 @@ build/
 .pytest_cache/
 
 # AI 모델 가중치 (대용량)
-model/checkpoints/
-model/weights/
+ai/model/checkpoints/
+ai/model/weights/
 *.pt
 *.pth
 *.ckpt
