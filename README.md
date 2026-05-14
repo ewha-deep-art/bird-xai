@@ -47,3 +47,53 @@ Movebank GPS + ERA5 Climate
 ## 참고
 
 - 일부 데이터와 모델 가중치는 용량 문제로 Git에 포함하지 않습니다.
+
+## 환경 설정
+
+현재 저장소는 `pyproject.toml`의 `[project.scripts]`로 CLI를 등록합니다. 따라서 `bird-xai-preprocess`, `bird-xai-train`, `bird-xai-server`를 쓰려면 먼저 프로젝트 환경을 설치해야 합니다.
+
+`uv` 기준 권장 설치 순서:
+
+```bash
+cd /home/nagyeop/bird-xai
+uv venv
+uv sync --extra dev
+```
+
+가상환경을 활성화해서 콘솔 스크립트를 직접 쓰려면:
+
+```bash
+source .venv/bin/activate
+bird-xai-preprocess --help
+```
+
+가상환경을 활성화하지 않고 바로 실행하려면 `uv run`을 사용합니다.
+
+```bash
+uv run bird-xai-preprocess --help
+```
+
+현재 기본 raw 데이터 경로는 아래 두 파일로 고정되어 있습니다.
+
+- `data/raw/H17-6330-6330.csv`
+- `data/raw/1f235b2421969a15a264a061fe577e4b.nc`
+
+## 최소 기능 실행 순서
+
+실행 순서는 아래 하나로 고정합니다.
+
+```bash
+uv run bird-xai-preprocess
+uv run bird-xai-train --epochs 1
+uv run bird-xai-server
+```
+
+`bird-xai-preprocess`는 항상 strict ERA5 매핑을 사용합니다. 따라서 `xarray`, `netCDF4` 같은 의존성과 실제 ERA5 변수 매핑이 모두 준비되어 있어야 합니다.
+
+## 빠른 검증
+
+contracts와 현재 Python 파이프라인 검증:
+
+```bash
+uv run python -m unittest tests.test_contracts tests.test_preprocessing tests.test_service_flow tests.test_server tests.test_training_smoke
+```
