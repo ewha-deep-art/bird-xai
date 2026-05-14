@@ -1,8 +1,19 @@
 # =====================
 # Data (LFS 미사용 - 대용량 파일 제외)
 # =====================
-data/raw/
-data/processed/
+data/raw/*
+!data/raw/.gitkeep
+data/processed/*
+!data/processed/.gitkeep
+!data/processed/canonical/
+!data/processed/features/
+!data/processed/datasets/
+data/processed/canonical/*
+!data/processed/canonical/.gitkeep
+data/processed/features/*
+!data/processed/features/.gitkeep
+data/processed/datasets/*
+!data/processed/datasets/.gitkeep
 
 # =====================
 # Python
@@ -19,8 +30,8 @@ build/
 .pytest_cache/
 
 # AI 모델 가중치 (대용량)
-ai/model/checkpoints/
-ai/model/weights/
+ai/training/model/checkpoints/
+ai/training/model/weights/
 *.pt
 *.pth
 *.ckpt
