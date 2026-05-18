@@ -4,6 +4,9 @@
 data/raw/
 data/processed/
 
+# ERA5 raw data (Google Drive로 관리)
+data/raw/era5/
+
 # =====================
 # Python
 # =====================
