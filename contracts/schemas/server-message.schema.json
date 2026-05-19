@@ -1,0 +1,10 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://bird-xai.local/schemas/server-message.schema.json",
+  "title": "Bird XAI Server Message",
+  "description": "Complete server → Unity wire surface. Discriminated by message_type.",
+  "oneOf": [
+    { "$ref": "https://bird-xai.local/schemas/frame.schema.json" },
+    { "$ref": "https://bird-xai.local/schemas/error.schema.json" }
+  ]
+}

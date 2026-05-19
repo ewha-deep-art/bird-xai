@@ -12,6 +12,7 @@ dependencies = [
   "fastapi>=0.115,<1",
   "uvicorn>=0.30,<1",
   "pydantic>=2.7,<3",
+  "pydantic-settings>=2.3,<3",
   "jsonschema>=4.22,<5",
   "pandas>=2.2,<3",
   "numpy>=1.26,<3",
@@ -33,13 +34,11 @@ dev = [
 bird-xai-preprocess = "ai.training.preprocessing.pipeline:main"
 bird-xai-train = "ai.training.model.train:main"
 bird-xai-server = "ai.server.app:run"
-bird-xai-ws-smoke = "ai.server.smoke_client:main"
+bird-xai-ws-smoke = "tests.smoke_client:main"
 
 [tool.setuptools.packages.find]
-include = ["ai*"]
+include = ["ai*", "tests*"]
 
-[tool.setuptools.package-data]
-"ai.server" = ["static/*.html"]
 
 [tool.pytest.ini_options]
 pythonpath = ["."]

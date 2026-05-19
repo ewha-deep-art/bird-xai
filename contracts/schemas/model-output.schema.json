@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://bird-xai.local/schemas/model-output.schema.json",
+  "title": "Bird XAI Model Output",
+  "description": "Internal: predictor → server. Never sent to Unity.",
+  "type": "object",
+  "properties": {
+    "contract_type": { "type": "string", "const": "model.output" },
+    "predicted_window": {
+      "type": "array",
+      "items": { "$ref": "https://bird-xai.local/schemas/common.schema.json#/$defs/point" },
+      "minItems": 1
+    },
+    "candidates": {
+      "type": "array",
+      "items": { "$ref": "https://bird-xai.local/schemas/common.schema.json#/$defs/candidatePath" },
+      "minItems": 1
+    },
+    "raw_attributions": {
+      "type": "object",
+      "propertyNames": { "$ref": "https://bird-xai.local/schemas/common.schema.json#/$defs/attributionFeatureKey" },
+      "additionalProperties": { "type": "number" }
+    }
+  },
+  "required": ["contract_type", "predicted_window", "candidates", "raw_attributions"],
+  "additionalProperties": false
+}
