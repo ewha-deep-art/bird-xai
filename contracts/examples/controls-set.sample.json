@@ -1,0 +1,8 @@
+{
+  "schema_version": "1.0.0",
+  "message_type": "controls.set",
+  "overrides": {
+    "wind_speed": 0.15,
+    "wind_direction": 0.0
+  }
+}

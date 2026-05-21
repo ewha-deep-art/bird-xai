@@ -1,0 +1,48 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://bird-xai.local/schemas/frame.schema.json",
+  "title": "Bird XAI Frame Message",
+  "description": "Server → Unity: a single frame sliced from a pre-computed prediction window.",
+  "type": "object",
+  "properties": {
+    "schema_version": { "type": "string", "const": "1.0.0" },
+    "message_type": { "type": "string", "const": "frame" },
+    "position": {
+      "$ref": "https://bird-xai.local/schemas/common.schema.json#/$defs/point"
+    },
+    "predicted_path": {
+      "type": "array",
+      "items": { "$ref": "https://bird-xai.local/schemas/common.schema.json#/$defs/point" },
+      "minItems": 1
+    },
+    "candidates": {
+      "type": "array",
+      "items": { "$ref": "https://bird-xai.local/schemas/common.schema.json#/$defs/candidatePath" },
+      "minItems": 1
+    },
+    "xai": {
+      "$ref": "https://bird-xai.local/schemas/common.schema.json#/$defs/xaiResult"
+    },
+    "boids": {
+      "oneOf": [
+        {
+          "type": "array",
+          "items": { "$ref": "https://bird-xai.local/schemas/common.schema.json#/$defs/boidAgent" }
+        },
+        { "type": "null" }
+      ]
+    },
+    "applied_overrides": {
+      "oneOf": [
+        {
+          "type": "object",
+          "propertyNames": { "$ref": "https://bird-xai.local/schemas/common.schema.json#/$defs/attributionFeatureKey" },
+          "additionalProperties": { "type": "number" }
+        },
+        { "type": "null" }
+      ]
+    }
+  },
+  "required": ["schema_version", "message_type", "position", "predicted_path", "candidates", "xai"],
+  "additionalProperties": false
+}

@@ -1,0 +1,66 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://bird-xai.local/schemas/common.schema.json",
+  "title": "Bird XAI Common Definitions",
+  "$defs": {
+    "attributionFeatureKey": {
+      "type": "string",
+      "enum": ["wind_speed", "wind_direction"]
+    },
+    "point": {
+      "type": "object",
+      "properties": {
+        "lat": { "type": "number" },
+        "lon": { "type": "number" },
+        "altitude_m": { "type": "number" }
+      },
+      "required": ["lat", "lon", "altitude_m"],
+      "additionalProperties": false
+    },
+    "candidatePath": {
+      "type": "object",
+      "properties": {
+        "path_id": { "type": "string" },
+        "score": { "type": "number", "minimum": 0, "maximum": 1 },
+        "points": {
+          "type": "array",
+          "items": { "$ref": "https://bird-xai.local/schemas/common.schema.json#/$defs/point" },
+          "minItems": 1
+        }
+      },
+      "required": ["path_id", "score", "points"],
+      "additionalProperties": false
+    },
+    "xaiResult": {
+      "type": "object",
+      "properties": {
+        "attributions": {
+          "type": "object",
+          "propertyNames": { "$ref": "https://bird-xai.local/schemas/common.schema.json#/$defs/attributionFeatureKey" },
+          "additionalProperties": { "type": "number", "minimum": 0, "maximum": 1 }
+        }
+      },
+      "required": ["attributions"],
+      "additionalProperties": false
+    },
+    "boidVelocity": {
+      "type": "object",
+      "properties": {
+        "east": { "type": "number" },
+        "north": { "type": "number" }
+      },
+      "required": ["east", "north"],
+      "additionalProperties": false
+    },
+    "boidAgent": {
+      "type": "object",
+      "properties": {
+        "agent_id": { "type": "string" },
+        "position": { "$ref": "https://bird-xai.local/schemas/common.schema.json#/$defs/point" },
+        "velocity": { "$ref": "https://bird-xai.local/schemas/common.schema.json#/$defs/boidVelocity" }
+      },
+      "required": ["agent_id", "position", "velocity"],
+      "additionalProperties": false
+    }
+  }
+}

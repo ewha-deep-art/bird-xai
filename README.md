@@ -92,8 +92,9 @@ uv run bird-xai-server
 
 ## 빠른 검증
 
-contracts와 현재 Python 파이프라인 검증:
+mock 서버를 띄운 상태에서 WebSocket 왕복 검증:
 
 ```bash
-uv run python -m unittest tests.test_contracts tests.test_preprocessing tests.test_service_flow tests.test_server tests.test_training_smoke
+BIRD_XAI_MOCK=true uv run bird-xai-server &
+uv run bird-xai-ws-smoke
 ```
