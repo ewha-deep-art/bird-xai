@@ -8,7 +8,7 @@ from contextlib import suppress
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 
 from ai.config import get_settings
-from ai.contracts.models import ErrorMessage
+from ai.common.models import ErrorMessage
 
 
 def create_app() -> FastAPI:
@@ -29,7 +29,7 @@ def create_app() -> FastAPI:
             "backend": service.pipeline.backend_name,
             "subject_id": service.session.subject_id,
         }
-
+    
     @app.websocket("/ws")
     async def websocket_endpoint(websocket: WebSocket) -> None:
         await websocket.accept()
@@ -40,7 +40,7 @@ def create_app() -> FastAPI:
             return
 
         async def send_loop() -> None:
-            for frame in service.iter_frames():
+            async for frame in service.iter_frames():
                 await websocket.send_text(frame.model_dump_json())
                 await asyncio.sleep(settings.frame_interval)
 
@@ -49,7 +49,7 @@ def create_app() -> FastAPI:
             while True:
                 payload = await websocket.receive_json()
                 try:
-                    service.update_overrides(payload)
+                    await service.update_overrides(payload)
                 except Exception as exc:
                     await websocket.send_text(
                         ErrorMessage(code="bad_request", detail=str(exc)).model_dump_json()
@@ -63,17 +63,7 @@ def create_app() -> FastAPI:
 
     return app
 
-
 def run() -> None:
-    import argparse
-    import os
-
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--mock", action="store_true")
-    args, _ = parser.parse_known_args()
-    if args.mock:
-        os.environ["BIRD_XAI_MOCK"] = "true"
-
     settings = get_settings()
     import uvicorn
 

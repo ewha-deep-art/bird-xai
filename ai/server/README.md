@@ -13,10 +13,10 @@ Bird XAI의 전달 레이어입니다. FastAPI + WebSocket 기반으로 Unity와
 연결 직후 서버가 `frame`을 주기적으로 전송하기 시작합니다.
 
 ```
-connect → server: frame, frame, frame, ...  (BIRD_XAI_FRAME_INTERVAL 초 간격)
+connect → server: frame, frame, frame, ...  (frame_interval 초 간격)
 ```
 
-Unity에서 `controls.set`을 보내면 다음 frame부터 `applied_overrides`가 반영됩니다.
+Unity에서 `controls.set`을 보내면 이후 frame부터 `applied_overrides`가 반영됩니다.
 
 ```
 client: controls.set
@@ -43,33 +43,10 @@ client: controls.set
 ## 실행
 
 ```bash
-# real 서버 (ML 파이프라인 필요)
 uv run bird-xai-server
-
-# mock 서버 (ML 파이프라인 불필요, Unity 연동 테스트용)
-uv run bird-xai-server --mock
-BIRD_XAI_MOCK=true uv run bird-xai-server
 ```
 
-환경 변수: `BIRD_XAI_HOST`, `BIRD_XAI_PORT`, `BIRD_XAI_MOCK`, `BIRD_XAI_FRAME_INTERVAL` (기본 `1.0`초)
-
-## Smoke test
-
-```bash
-uv run bird-xai-ws-smoke
-```
-
-테스트 순서:
-1. `WS /ws` 연결
-2. bootstrap `frame` 수신 확인
-3. `controls.set` 전송 후 `applied_overrides`가 포함된 `frame` 수신 확인
-
-옵션:
-
-```bash
-uv run bird-xai-ws-smoke --wind-speed 0.2 --wind-direction 0.1
-uv run bird-xai-ws-smoke --url ws://127.0.0.1:8000/ws --timeout 10
-```
+환경 변수: `BIRD_XAI_HOST`, `BIRD_XAI_PORT`
 
 ## 파일 구조
 
@@ -79,4 +56,7 @@ uv run bird-xai-ws-smoke --url ws://127.0.0.1:8000/ws --timeout 10
 | `service.py` | ML 파이프라인 연동 서비스 (real 모드) |
 | `mock_service.py` | 정적 픽스처 반환 서비스 (mock 모드) |
 | `session.py` | 세션 상태 (`subject_id`, `overrides`) |
-| `smoke_client.py` | 터미널 WebSocket 테스트 클라이언트 |
+
+## 관련 디렉토리
+- 계약 및 스키마: [contracts/README.md](../../contracts/README.md)
+- 추론 파이프라인: [ai/inference/README.md](../inference/README.md)
