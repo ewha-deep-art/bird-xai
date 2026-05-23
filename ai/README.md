@@ -10,8 +10,9 @@
   - 학습된 모델을 사용한 예측, XAI, 군집 시뮬레이션
 - `server/`
   - 추론 결과를 Unity에 전달하는 서버 레이어
-- `contracts/`
-  - Python 계약 Pydantic 모델 (`contracts/schemas/` 기반)
+- `common/`
+  - 공통 상수 및 경로
+  - Python 계약 Pydantic 모델
 - `config.py`
   - 서버 설정 (`BIRD_XAI_*` 환경변수)
 
