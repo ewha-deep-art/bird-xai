@@ -5,7 +5,7 @@ from collections import deque
 from itertools import cycle
 from captum.attr import IntegratedGradients
 
-from ai.common import DEVICE, FEATURES, TARGET_FEATURES, TARGET_SCALER_PATH, BIRD, test_loader
+from ai.common import DEVICE, FEATURES, TARGET_FEATURES, TARGET_SCALER_PATH, test_loader
 from ai.common.models import (
     CandidatePath,
     FrameMessage,
@@ -26,7 +26,7 @@ class BirdPipeline:
         self._queue: deque[tuple[Point, XaiResult]] = deque()
         self._pending_queue: deque[tuple[Point, XaiResult]] | None = None
         self._last_overrides: dict | None = None
-        self.model = load_model_with_state(bird=BIRD)
+        self.model = load_model_with_state()
         self.target_scaler = joblib.load(TARGET_SCALER_PATH)
         self.ig = IntegratedGradients(self.model)
 

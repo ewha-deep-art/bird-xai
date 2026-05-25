@@ -6,7 +6,7 @@ from torch.optim.lr_scheduler import ReduceLROnPlateau
 import time
 
 from ai.common import (
-    MODEL_DIR, DEVICE, BIRD,
+    MODEL_SAVE_PATH, DEVICE,
     train_loader, val_loader
 )
 from ai.training.model import load_model
@@ -42,7 +42,7 @@ def evaluate(model, loader, criterion, device):
         total_loss += criterion(model(X), y).item()
     return total_loss / len(loader)
 
-def train():
+def main():
     model = load_model()
     print(f"[model] 파라미터 수: {sum(p.numel() for p in model.parameters()):,}")
 
@@ -51,7 +51,6 @@ def train():
     scheduler = ReduceLROnPlateau(optimizer, mode='min', patience=5, factor=0.5)
 
     best_val_loss  = float('inf')
-    model_save_path = MODEL_DIR / f"{BIRD}_best.pt"
 
     for epoch in range(1, EPOCHS + 1):
         t0         = time.time()
@@ -63,8 +62,5 @@ def train():
 
         if val_loss < best_val_loss:
             best_val_loss = val_loss
-            torch.save(model.state_dict(), model_save_path)
-            print(f"  → saved {model_save_path}  (val={best_val_loss:.4f})")
-
-if __name__ == "__main__":
-    train()
+            torch.save(model.state_dict(), MODEL_SAVE_PATH)
+            print(f"  → saved {MODEL_SAVE_PATH}  (val={best_val_loss:.4f})")

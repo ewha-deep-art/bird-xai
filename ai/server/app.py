@@ -63,7 +63,7 @@ def create_app() -> FastAPI:
 
     return app
 
-def run() -> None:
+def main() -> None:
     settings = get_settings()
     import uvicorn
 
@@ -74,7 +74,3 @@ def run() -> None:
         port=settings.port,
         reload=False,
     )
-
-
-if __name__ == "__main__":
-    run()
