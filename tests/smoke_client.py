@@ -9,8 +9,7 @@ from typing import Any
 
 from pydantic import TypeAdapter
 
-from ai.common.constants import SCHEMA_VERSION
-from ai.contracts.models import FrameMessage, ServerMessage
+from ai.common.models import SCHEMA_VERSION, FrameMessage, ServerMessage
 
 import websockets
 
@@ -25,9 +24,9 @@ def build_controls_set_payload(wind_speed: float, wind_direction: float) -> dict
     return {
         "schema_version": SCHEMA_VERSION,
         "message_type": "controls.set",
+        # TODO: tmp
         "overrides": {
-            "wind_speed": wind_speed,
-            "wind_direction": wind_direction,
+            "u_925": wind_speed,
         },
     }
 
@@ -61,6 +60,12 @@ async def run_smoke_test(
         print(f"=> controls.set wind_speed={wind_speed} wind_direction={wind_direction}")
         await socket.send(json.dumps(controls))
 
+        print("Streaming frames...")
+        from datetime import datetime
+        for i in range(60):
+            frame = _expect_frame(await _receive_validated_message(socket, timeout=timeout))
+            print(f"[{datetime.now().strftime('%H:%M:%S')}] frame {i+1}: applied_overrides={frame.applied_overrides}")
+        
         frame = _expect_frame(await _receive_validated_message(socket, timeout=timeout))
         if frame.applied_overrides is None:
             raise RuntimeError("Server returned frame without applied_overrides after controls.set.")
@@ -83,7 +88,7 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--url", default="ws://127.0.0.1:8000/ws", help="WebSocket endpoint URL.")
     parser.add_argument("--wind-speed", type=float, default=0.15, help="wind_speed override value.")
     parser.add_argument("--wind-direction", type=float, default=0.0, help="wind_direction override value.")
-    parser.add_argument("--timeout", type=float, default=5.0, help="Seconds to wait for each server response.")
+    parser.add_argument("--timeout", type=float, default=50.0, help="Seconds to wait for each server response.")
     return parser
 
 
