@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 
-from ai.common import DEVICE, MODEL_DIR, FEATURES, TARGET_FEATURES
+from ai.common import DEVICE, MODEL_SAVE_PATH, FEATURES, TARGET_FEATURES
 
 class BirdLSTM(nn.Module):
     """단층/다층 LSTM + FC 출력."""
@@ -33,8 +33,8 @@ def load_model():
     ).to(DEVICE)
     return model
 
-def load_model_with_state(bird: str):
+def load_model_with_state():
     model = load_model()
-    model.load_state_dict(torch.load(MODEL_DIR / f"{bird}_best.pt", map_location=DEVICE))
+    model.load_state_dict(torch.load(MODEL_SAVE_PATH, map_location=DEVICE))
     model.eval()
     return model

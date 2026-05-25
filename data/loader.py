@@ -1,16 +1,14 @@
 import numpy as np
 import pandas as pd
 import torch
-from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import MinMaxScaler
 import joblib
 from torch.utils.data import DataLoader, TensorDataset
 
 from ai.common import (
-    RANDOM_STATE, TIMESTAMP_COL, ALL_FEATURES, TARGET_FEATURES,
     DATASET_PATH, FEAT_SCALER_PATH, TARGET_SCALER_PATH,
+    TIMESTAMP_COL, ALL_FEATURES, TARGET_FEATURES, BIRDS
 )
-
 
 def _make_windows(data: np.ndarray, window_size: int) -> np.ndarray:
     """2D 배열을 슬라이딩 윈도우로 분할. (num_samples, F) → (num_windows, window_size, F)"""
@@ -19,31 +17,35 @@ def _make_windows(data: np.ndarray, window_size: int) -> np.ndarray:
     return np.array([data[i:i + window_size] for i in range(len(data) - window_size + 1)])
 
 
-def _select(data: pd.DataFrame, bird: str, features: list):
+def _extract_bird(data: pd.DataFrame, bird: str, features: list):
     """특정 새의 데이터를 시간순 정렬 후 feature/target 배열로 반환."""
+    assert bird is not None, "bird는 빈 값이 아니여야 합니다."
     assert bird in data['bird'].unique(), f"bird는 {data['bird'].unique()} 중 하나여야 합니다."
     assert all(f in ALL_FEATURES for f in features), f"features는 {ALL_FEATURES} 중에서 선택되어야 합니다."
 
-    data = data[data['bird'] == bird]
-    data = data.sort_values(TIMESTAMP_COL).reset_index(drop=True)
+    subset = data[data['bird'] == bird].sort_values(TIMESTAMP_COL).reset_index(drop=True)
 
     # NaN을 이전 값으로 채움 (시계열 연속성 유지)
     cols = features + TARGET_FEATURES
-    nan_count = data[cols].isna().sum().sum()
+    nan_count = subset[cols].isna().sum().sum()
     if nan_count:
-        data[cols] = data[cols].ffill().bfill()
-        print(f"[경고] NaN {nan_count}개를 ffill로 채웠습니다.")
+        subset[cols] = subset[cols].ffill().bfill()
+        print(f"[경고] {bird}: NaN {nan_count}개를 ffill로 채웠습니다.")
 
-    X = data[features].values         # (num_samples, num_features)
-    y = data[TARGET_FEATURES].values  # (num_samples, num_targets)
+    X = subset[features].values         # (num_samples, num_features)
+    y = subset[TARGET_FEATURES].values  # (num_samples, num_targets)
     return X, y
 
 
-def _split_train_eval(X, y):
-    """시간 순서를 유지하며 train(80%) / val(10%) / test(10%) 분할."""
-    X_train, X_tmp, y_train, y_tmp = train_test_split(X, y, test_size=0.2, random_state=RANDOM_STATE, shuffle=False)
-    X_val, X_test, y_val, y_test   = train_test_split(X_tmp, y_tmp, test_size=0.5, random_state=RANDOM_STATE, shuffle=False)
-    return X_train, y_train, X_val, y_val, X_test, y_test
+def _collect_windows(data: pd.DataFrame, birds: list, features: list, window_size: int):
+    """여러 개체의 윈도우를 개체 경계 없이 각각 생성 후 concat."""
+    X_list, y_list = [], []
+    for bird in birds:
+        X, y = _extract_bird(data, bird, features)
+        # 개체 내부에서만 윈도우 생성 → 개체 간 경계를 넘지 않음
+        X_list.append(_make_windows(X, window_size))
+        y_list.append(_make_windows(y, window_size))
+    return np.concatenate(X_list, axis=0), np.concatenate(y_list, axis=0)
 
 
 def _normalize(X_train, y_train, X_val, y_val, X_test, y_test):
@@ -82,17 +84,21 @@ def _make_loader(X, y, batch_size=32, shuffle=False):
     return DataLoader(TensorDataset(tx, ty), batch_size=batch_size, shuffle=shuffle)
 
 
-def get_data_loader(bird: str, features: list, window_size: int, batch_size: int = 32):
-    """CSV 로드부터 DataLoader 반환까지의 전처리 파이프라인."""
+def get_data_loader(features: list, window_size: int, batch_size: int = 32):
+    """CSV 로드부터 DataLoader 반환까지의 전처리 파이프라인.
+
+    분할 기준 (개체 단위, 시계열 오염 방지):
+        Train : Art, Jill, Hudson, Bea, Caley, Isabel  (순풍형·광주기형 혼합)
+        Val   : Whit                                    (순풍형 검증)
+        Test  : Bergen                                  (광주기형 → 일반화 검증)
+    """
     data = pd.read_csv(DATASET_PATH)
 
-    X, y = _select(data, bird=bird, features=features)
+    # 개체별로 윈도우 생성 후 split별로 concat
+    X_train, y_train = _collect_windows(data, BIRDS.get('train'), features, window_size)
+    X_val,   y_val   = _collect_windows(data, BIRDS.get('valid'),   features, window_size)
+    X_test,  y_test  = _collect_windows(data, BIRDS.get('test'),  features, window_size)
 
-    # 슬라이딩 윈도우 적용 → (num_windows, window_size, num_features/num_targets)
-    X = _make_windows(X, window_size)
-    y = _make_windows(y, window_size)
-
-    X_train, y_train, X_val, y_val, X_test, y_test = _split_train_eval(X, y)
     X_train, y_train, X_val, y_val, X_test, y_test = _normalize(
         X_train, y_train, X_val, y_val, X_test, y_test
     )

@@ -24,11 +24,10 @@ CHECKPOINT_DIR.mkdir(exist_ok=True)
 
 # ─── Optuna objective ─────────────────────────────────────────────────────────
 
-def make_objective(bird: str, features: list, args):
+def make_objective(features: list, args):
     """클로저로 데이터/고정 설정을 캡처한 objective 함수 반환."""
     # 데이터는 trial마다 재로드하지 않도록 미리 로드
     train_loader, val_loader, _ = get_data_loader(
-        bird=bird,
         features=features,
         window_size=args.window_size,
         batch_size=args.batch_size,
@@ -76,11 +75,10 @@ def make_objective(bird: str, features: list, args):
 
 # ─── 최적 파라미터로 최종 학습 ────────────────────────────────────────────────
 
-def train_best(bird: str, features: list, best_params: dict, args):
+def train_best(features: list, best_params: dict, args):
     """study에서 찾은 최적 파라미터로 재학습 후 test 평가."""
 
     train_loader, val_loader, test_loader = get_data_loader(
-        bird=bird,
         features=features,
         window_size=args.window_size,
         batch_size=args.batch_size,
@@ -99,7 +97,7 @@ def train_best(bird: str, features: list, best_params: dict, args):
     scheduler = ReduceLROnPlateau(optimizer, mode='min', patience=5, factor=0.5)
 
     best_val_loss = float('inf')
-    checkpoint_path = CHECKPOINT_DIR / f"{bird}_best.pt"
+    checkpoint_path = CHECKPOINT_DIR / f"bird_best.pt"
 
     for epoch in range(1, args.epochs + 1):
         t0 = time.time()
@@ -153,7 +151,6 @@ def parse_args():
     parser = argparse.ArgumentParser(description="Bird LSTM + Optuna Experiment")
 
     # 데이터
-    parser.add_argument("--bird",        type=str, required=True)
     parser.add_argument("--features",    type=str, nargs="+", help="기본: ALL_FEATURES")
     parser.add_argument("--window_size", type=int, default=24)
     parser.add_argument("--batch_size",  type=int, default=32)
@@ -163,7 +160,6 @@ def parse_args():
 
     # Optuna
     parser.add_argument("--n_trials",    type=int, default=30,  help="탐색할 trial 수")
-    parser.add_argument("--study_name",  type=str, default=None, help="study 이름 (기본: bird명)")
 
     return parser.parse_args()
 
@@ -171,19 +167,17 @@ def parse_args():
 if __name__ == "__main__":
     args = parse_args()
     features = args.features or ALL_FEATURES
-    study_name = args.study_name or f"bird_lstm_{args.bird}"
 
     # pruner: 성능 나쁜 trial을 epoch 중간에 조기 종료
     pruner = optuna.pruners.MedianPruner(n_startup_trials=5, n_warmup_steps=10)
     study  = optuna.create_study(
-        study_name=study_name,
         direction="minimize",
         pruner=pruner,
     )
 
-    print(f"[Optuna] study='{study_name}'  n_trials={args.n_trials}")
+    print(f"[Optuna] n_trials={args.n_trials}")
     study.optimize(
-        make_objective(args.bird, features, args),
+        make_objective(features, args),
         n_trials=args.n_trials,
         show_progress_bar=True,
     )
@@ -195,4 +189,4 @@ if __name__ == "__main__":
 
     # 최적 파라미터로 최종 학습
     print("\n[최종 학습 시작]")
-    train_best(args.bird, features, best.params, args)
+    train_best(features, best.params, args)

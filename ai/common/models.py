@@ -11,7 +11,7 @@ from pydantic import BaseModel, ConfigDict, Field, TypeAdapter
 # ---------------------------------------------------------------------------
 
 SCHEMA_VERSION = "1.0.0"
-AttributionFeatureKey = Literal["u_925"] # NOTE: 변경 가능
+AttributionFeatureKey = Literal["daylength_h", "ws_925", "q_850"] # NOTE: 변경 가능
 
 # ---------------------------------------------------------------------------
 # Shared types
