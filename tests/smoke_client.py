@@ -26,7 +26,9 @@ def build_controls_set_payload(wind_speed: float, wind_direction: float) -> dict
         "message_type": "controls.set",
         # TODO: tmp
         "overrides": {
-            "u_925": wind_speed,
+            "daylength_h": wind_speed,
+            "ws_925": wind_speed,
+            "q_850": wind_speed,
         },
     }
 
@@ -64,7 +66,7 @@ async def run_smoke_test(
         from datetime import datetime
         for i in range(60):
             frame = _expect_frame(await _receive_validated_message(socket, timeout=timeout))
-            print(f"[{datetime.now().strftime('%H:%M:%S')}] frame {i+1}: applied_overrides={frame.applied_overrides}")
+            print(f"[{datetime.now().strftime('%H:%M:%S')}] frame {i+1}: positions={frame.position}, xai={frame.xai}")
         
         frame = _expect_frame(await _receive_validated_message(socket, timeout=timeout))
         if frame.applied_overrides is None:
@@ -104,7 +106,3 @@ def main() -> None:
         )
     )
     raise SystemExit(exit_code)
-
-
-if __name__ == "__main__":
-    main()
