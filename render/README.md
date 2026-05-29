@@ -19,9 +19,9 @@
   - 받은 리퀘스트 등의 로그
 - `Packages/`
   - 유니티에 사용되는 json 코드
-- `ProjectSettings`
+- `ProjectSettings/`
   - 유니티에서 사용하는 에셋
-- `UserSettings`
+- `UserSettings/`
   - 유니티 설정값
 
 
