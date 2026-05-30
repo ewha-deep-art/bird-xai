@@ -3,8 +3,38 @@
 학습과 추론의 기반이 되는 파일들이 이곳에 모이며, 외부 출처에서 받은 데이터와
 내부 파이프라인이 생성한 산출물을 명확히 구분해 관리합니다.
 
-## 데이터 출처
+## 디렉토리 구성 및 가이드
+### 📂 Data Directory Guide
 
+본 디렉토리는 프로젝트에서 사용되는 데이터의 생명주기(원시 데이터 수집부터 전처리 완료까지)를 관리합니다. 데이터 보안 및 용량 제한으로 인해 실제 데이터셋은 Git 추적에서 제외될 수 있습니다.
+
+data/
+├── README.md          <- 현재 가이드 문서
+├── raw/               <- 원본 데이터 (Raw Data) 보관 폴더
+└── processed/         <- 전처리 완료된 데이터 (Processed Data) 보관 폴더
+
+### ⚠️ 대용량 데이터 다운로드 안내
+LSTM 모델의 인풋으로 사용되는 대용량 데이터셋은 깃허브 용량 한계로 인해 공용 Google Drive를 통해 제공됩니다. 아래 링크에서 다운로드 받아 본 디렉토리(`data/processed/`) 아래에 위치시켜 주세요.
+- **다운로드 링크:** [공용 구글 드라이브 링크 입력]
+- **파일명:** `preprocessed_9birds_full.csv`
+
+#### 전처리한 데이터 컬럼 명세 (`preprocessed_9birds_full.csv`)
+
+| 컬럼명 | 데이터 타입 | 설명 |
+| :--- | :--- | :--- |
+| **species** | String | 조류 종(Species) 정보 |
+| **device** | Integer | 데이터 수집 장비 ID |
+| **date_time** | DateTime | 데이터 기록 일시 (YYYY-MM-DD HH:MM:SS) |
+| **latitude** | Float | 위도 (Latitude) |
+| **longitude** | Float | 경도 (Longitude) |
+| **altitude** | Float | 고도 (Altitude) |
+| **geometry** | String | 공간 분석용 기하학적 포인트 데이터 (POINT) |
+| **v_component_of_wind_10m** | Float | 10m 고도에서의 바람의 남북(V) 성분 (ERA5 데이터) |
+| **u_component_of_wind_10m** | Float | 10m 고도에서의 바람의 동서(U) 성분 (ERA5 데이터) |
+| **temperature_2m** | Float | 지상 2m 온도 (ERA5 데이터) |
+| **total_precipitation** | Float | 총 강수량 (ERA5 데이터) |
+
+## 데이터 출처
 ### Movebank
 - 용도: 철새 GPS 이동 경로 데이터 수집
 - 데이터셋: *Osprey Bierregaard North and South America*
@@ -33,43 +63,6 @@
   - GPS 위치·시각에 맞춘 1:1 환경 변수 매핑
   - 모델 학습과 XAI 설명의 주요 feature 제공
 
-## 디렉토리 구성
-
-### `raw/`
-외부에서 직접 수집하거나 다운로드한 원본 파일을 보관합니다.
-
-```
-raw/
-├── movebank/
-│   └── Osprey_Bierregaard_North_and_South_America.csv
-└── era5/
-    └── era5_hourly_YYYY_MM.nc  (Google Drive 관리 — Git 미포함)
-```
-
-- 사람이 직접 관리하는 입력 데이터
-- 가공하지 않은 상태 유지
-- ERA5 파일은 용량(GB급)으로 인해 Git에 포함하지 않음
-  → Google Drive 경로: `MyDrive/BirdXAI/era5_hourly/`
-
-### `processed/`
-전처리 파이프라인이 생성한 학습 및 추론용 산출물을 보관합니다.
-
-```
-processed/
-├── README.md                  ← 전처리 상세 및 파일 구조 설명
-├── preprocessed_gps_era5.csv  ← 전처리 완료 테이블 (검토·SHAP 분석용)
-├── lstm_input_final.npz       ← LSTM 학습용 최종 파일
-├── feat_scaler.pkl            ← feature MinMaxScaler
-└── tgt_scaler.pkl             ← target MinMaxScaler
-```
-
-- `ai/training/preprocessing/`의 결과 저장 위치
-- 전처리 재현은 `BirdXAI_Preprocessing_LSTM.ipynb` 참고
-
-## 이 폴더에서 다루는 기술
-
-- 파일 포맷: `CSV`, `NetCDF`, `NPZ`, `PKL`
-- 주요 라이브러리: `pandas`, `numpy`, `xarray`, `scikit-learn`, `astral`
 
 ## 관련 디렉토리
 - 전처리 코드: [ai/training/preprocessing/](../ai/training/preprocessing/)
