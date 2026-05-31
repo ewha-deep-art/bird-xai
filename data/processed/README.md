@@ -1,141 +1,95 @@
-# data/processed/
-전처리 파이프라인의 산출물을 보관하는 디렉토리입니다.
-LSTM 학습에 필요한 모든 파일이 이곳에 저장됩니다.
+# 📂 Data Processing Guide (`data/processed`)
 
-전처리 전체 코드: `BirdXAI_Preprocessing_LSTM.ipynb`
-
-## 파일 목록
-
-| 파일명 | 크기 | 설명 |
-|--------|------|------|
-| `lstm_input_final.npz` | ~1MB | LSTM 학습용 최종 파일 (X, y) |
-| `preprocessed_gps_era5.csv` | ~0.7MB | 전처리 완료 테이블 (검토·SHAP 분석용) |
-| `feat_scaler.pkl` | - | feature MinMaxScaler (역변환용) |
-| `tgt_scaler.pkl` | - | target MinMaxScaler (역변환용) |
+본 디렉토리는 ERA5 기상 데이터와 조류 GPS 데이터를 시공간적으로 결합하고, LSTM 모델의 입력으로 사용하기 위해 전처리를 완료한 최종 데이터셋을 관리합니다.
 
 ---
 
-## 대상 개체 (9마리, 1년차 어린 물수리)
+## 📊 데이터셋 요약 (Dataset Summary)
 
-| 이름 | 연도 | 이동 범위 | 지배 변수 | 전략 유형 |
-|------|------|----------|----------|---------|
-| Art | 2012 | 44°N → -6°N | 순풍지원 925hPa (r=0.541) | 순풍형 |
-| Jill | 2012 | 44°N → 2°N | 순풍지원 925hPa (r=0.461) | 순풍형 |
-| Bergen | 2013 | 39°N → -6°N | 광주기 (r=0.565) | 광주기형 |
-| Whit | 2013 | 42°N → 18°N | 순풍지원 850hPa (r=0.612) | 순풍형 |
-| Clyde | 2014 | 41°N → 11°N | 비습 850hPa (r=-0.422) | 날씨회피형 |
-| Hudson | 2009 | 42°N → 6°N | 광주기 (r=0.431) | 광주기형 |
-| Bea | 2009 | 41°N → 7°N | 광주기 (r=0.670) | 광주기형 |
-| Caley | 2009 | 41°N → 5°N | 순풍지원 925hPa (r=0.366) | 순풍형 |
-| Isabel | 2009 | 42°N → 8°N | 순풍지원 925hPa (r=0.465) | 순풍형 |
+* **최종 파일명:** `preprocessed_9birds_full.csv` (대용량 파일로 공용 Google Drive에서 다운로드 필요)
+* **총 행 수 (Total Rows):** 15,693건 (9마리 × 9~11월 × 1시간 단위)
+* **평균 보간 비율:** 약 48% (각 개체별 GPS 관측 밀도에 따라 상이)
+* **결측치(NaN) 현황:**
+* `latitude`, `longitude`: Art (28건), Clyde (244건), Hudson (59건) -> 24시간을 초과하는 공백 구간
+* `ERA5 기상 변수`: 0건 (시공간 매칭 및 보간 완료)
+
+
 
 ---
 
-## 적용된 전처리
+## 🛠️ 전처리 파이프라인 (Preprocessing Pipeline)
 
-| 순서 | 항목 | 내용 |
-|------|------|------|
-| 1 | 활동 시간대 필터 | UTC 13~22시만 사용 (현지시간 9~18시, 물수리 이동 집중 시간대) |
-| 2 | 이동일 필터 | displacement_km > 10km인 날만 사용 (이동 패턴 집중 학습) |
-| 3 | log 변환 | `log(displacement_km + 1)` 적용 (이상치 1034km, 1039km 완화) |
-| 4 | 광주기 정밀 계산 | `astral` 라이브러리로 위도+날짜 기반 일조시간 계산 |
-| 5 | 개체 ID 원핫인코딩 | 9마리 개체 특성 차이를 모델에 반영 |
-| 6 | 날짜 gap 처리 | 2일 초과 gap 구간의 윈도우 제외 |
-| 7 | 개체별 슬라이딩 윈도우 | 개체 간 경계에서 윈도우 분리 후 병합 |
-| 8 | 정규화 | MinMaxScaler — train 데이터로만 fit, 전체에 transform |
+### 1. GPS 이상치 처리 (Outlier Handling)
 
----
+* **고도 음수값 처리:** 센서 오차로 발생한 `height_raw` 변수의 음수 값을 `0`으로 클리핑(Clipping) 조치했습니다. (예: Whit 개체 15건)
+* **비정상 고도 처리:** 정지 중 센서 오류로 판단되는 비정상적인 고도 데이터 1건을 결측치(`NaN`) 처리했습니다. (예: Bergen 개체 2013-09-05 16:00의 7,100m 데이터)
 
-## lstm_input_final.npz 구조
+### 2. 1시간 단위 리샘플링 (1-Hour Resampling)
 
-### 로드 방법
-```python
-import numpy as np
-data = np.load('lstm_input_final.npz')
+* GPS 원본 관측 간격은 불규칙적입니다. (중앙값 1시간, 최대 95시간)
+* 시계열 연속성을 위해 `pd.date_range(freq='1h')`를 사용하여 매 시간 정각 단위로 포인트를 생성하고, 실제 관측값이 없는 시간은 아래의 혼합 보간법을 적용했습니다.
 
-X_train = data['X_train']  # (836, 7, 15)
-y_train = data['y_train']  # (836,)
-X_val   = data['X_val']    # (72,  7, 15)
-y_val   = data['y_val']    # (72,)
-X_test  = data['X_test']   # (152, 7, 15)
-y_test  = data['y_test']   # (152,)
-```
+### 3. 구간별 혼합 보간 (Mixed Interpolation)
 
-### Shape 설명
+이동 경로의 특성을 고려하여 변수별로 최적의 보간 알고리즘을 다르게 적용했습니다.
 
-```
-(샘플 수, 윈도우=7일, feature 수=15)
-```
+* **3차 스플라인 보간 (Cubic Spline):** 이동 경로의 자연스러운 곡선을 반영하기 위해 `latitude`, `longitude`, `height_raw`에 적용했습니다. *(※ 보간 과정에서 발생한 고도 음수값은 다시 0으로 재클리핑하여 보정)*
+* **선형 보간 (Linear):** 속도와 방향의 변화를 반영하기 위해 `ground_speed`, `heading`에 적용했습니다.
+* **임계값 제한 (Gap Limit):** 너무 긴 구간은 추정이 불가능하므로, **24시간을 초과하는 공백(Gap)** 구간은 보간하지 않고 `NaN` 상태를 유지했습니다. (Clyde 개체의 최대 95시간 공백 등)
 
-| 축 | 의미 |
-|----|------|
-| axis=0 | 샘플 수 |
-| axis=1 | 연속 7일치 시퀀스 (윈도우 크기) |
-| axis=2 | 15개 feature |
+### 4. ERA5 기상 데이터 1시간 단위 매칭
 
-### Feature 순서 (axis=2)
+* 각 GPS 포인트의 위도, 경도, 시각에 가장 인접한 ERA5 격자점(Grid Point) 데이터를 추출했습니다.
+* 1시간 이내의 매칭만 유효한 것으로 처리했으며, 매칭되지 않은 시간대는 선형 보간(`Linear Interpolation`)을 통해 결측치를 모두 채웠습니다.
 
-| 인덱스 | 컬럼명 | 설명 | XAI 역할 |
-|--------|--------|------|---------|
-| 0 | `daylength_h` | 광주기 — 일조시간 (h) | **XAI 핵심** |
-| 1 | `ws_925` | 순풍지원 925hPa (m/s) | **XAI 핵심** |
-| 2 | `q_850` | 비습 850hPa (kg/kg) | **XAI 핵심** |
-| 3 | `displacement_km` | 전날 이동거리 (km) | 관성 패턴 |
-| 4 | `t_850` | 기온 850hPa (K) | 보조 |
-| 5 | `lapse_rate` | 대기불안정도 t_925-t_700 (K) | 보조 |
-| 6 | `bird_Art` | 개체 원핫인코딩 | 개체 특성 |
-| 7 | `bird_Bea` | 개체 원핫인코딩 | 개체 특성 |
-| 8 | `bird_Bergen` | 개체 원핫인코딩 | 개체 특성 |
-| 9 | `bird_Caley` | 개체 원핫인코딩 | 개체 특성 |
-| 10 | `bird_Clyde` | 개체 원핫인코딩 | 개체 특성 |
-| 11 | `bird_Hudson` | 개체 원핫인코딩 | 개체 특성 |
-| 12 | `bird_Isabel` | 개체 원핫인코딩 | 개체 특성 |
-| 13 | `bird_Jill` | 개체 원핫인코딩 | 개체 특성 |
-| 14 | `bird_Whit` | 개체 원핫인코딩 | 개체 특성 |
+### 5. 파생 변수 계산 (Feature Engineering)
 
-### 타깃 (y)
-- 값: `log(displacement_km + 1)` 후 MinMaxScaler 정규화
-- 범위: 0.0 ~ 1.0
-- 의미: 다음 날 이동거리 예측
+모델의 학습 성능을 높이기 위해 도메인 지식을 기반으로 다음 4가지 파생 변수를 추가했습니다.
 
-### 역변환 방법 (예측값 → km 단위 복원)
-```python
-import joblib, numpy as np
+* **순풍지원 성분 ($ws_{925}$):** 조류 비행 방향에 작용하는 바람 성분
 
-tgt_scaler = joblib.load('tgt_scaler.pkl')
-y_pred_km = np.exp(tgt_scaler.inverse_transform(y_pred.reshape(-1, 1))) - 1
-```
+$$ws_{925} = u_{925} \times \sin(\text{heading}) + v_{925} \times \cos(\text{heading})$$
+
+
+* **대기불안정도 ($\text{lapse\_rate}$):** 고도에 따른 기온 감률
+
+$$\text{lapse\_rate} = t_{925} - t_{700}$$
+
+
+* **이동 여부 ($\text{is\_moving}$):** 대지속도(`ground_speed`)가 $1\text{ m/s}$ 초과 시 True(1), 이하 시 False(0)
+* **일조시간 ($\text{daylength\_h}$):** `astral` 라이브러리를 활용하여 위도와 날짜를 기반으로 계산한 정밀 일조시간
+
+### 6. 데이터 신뢰도 표시 (Data Flag)
+
+보간된 데이터의 왜곡 영향을 분석할 수 있도록 보간 여부 플래그를 제공합니다.
+
+* `is_interpolated_gps`: GPS 위치 정보가 보간된 행인 경우 `1`
+* `is_interpolated_era5`: ERA5 환경 변수가 보간된 행인 경우 `1`
 
 ---
 
-## Train / Val / Test 분할
+## 📊 최종 데이터 컬럼 명세 (`preprocessed_9birds_full.csv`)
 
-| 구분 | 개체 | 샘플 수 | 비고 |
-|------|------|--------|------|
-| Train | Art, Jill, Hudson, Bea, Caley, Isabel | 836 | 순풍형·광주기형 혼합 |
-| Val | Whit | 72 | 순풍형 검증 |
-| Test | Bergen | 152 | 광주기형 — 일반화 성능 검증 |
-
-> 시계열 특성상 랜덤 분할 금지. 개체 기준 분할 적용.  
-> Bergen을 Test로 사용한 이유: Train과 가장 다른 전략(광주기형)을 가진 개체로,
-> 모델이 순풍형 새들로 학습하고도 광주기형 새를 예측할 수 있는지 일반화 성능 검증 가능.
-
----
-
-## XAI 활용 방향 (SHAP)
-
-SHAP으로 개체별 feature 기여도를 계산하면 아래와 같은 개체별 차이가 예상됩니다.
-
-| 개체 | 예상 높은 SHAP 변수 | 전략 |
-|------|-------------------|------|
-| Art, Jill, Whit, Caley, Isabel | `ws_925`, `ws_850` | 바람을 기다려 이동 |
-| Bergen, Bea, Hudson | `daylength_h` | 낮 길이 변화에 반응 |
-| Clyde | `q_850` | 악천후 회피 |
-
-Unity 시각화 매핑:
-- `daylength_h` SHAP → 경로 색상 (따뜻한/차가운 색조)
-- `ws_925` SHAP → 경로 선 굵기·속도
-- `q_850` SHAP → 경로 투명도·흐림 효과
+| 컬럼명 | 데이터 타입 | 설명 | 비고 |
+| --- | --- | --- | --- |
+| **species** | String | 조류 종 정보 | - |
+| **device** | Integer | 데이터 수집 장비 ID | - |
+| **date_time** | DateTime | 데이터 기록 일시 | YYYY-MM-DD HH:MM:SS |
+| **latitude** | Float | 위도 (Latitude) | 3차 스플라인 보간 (24h 초과 제한) |
+| **longitude** | Float | 경도 (Longitude) | 3차 스플라인 보간 (24h 초과 제한) |
+| **height_raw** | Float | 고도 (Altitude) | 음수 0 클리핑, 스플라인 보간 |
+| **ground_speed** | Float | 대지 속도 | 선형 보간 |
+| **heading** | Float | 이동 방향 (방위각) | 선형 보간 |
+| **u_component_of_wind_10m** | Float | 10m 고도 동서 바람 (U) | ERA5 기상 데이터 |
+| **v_component_of_wind_10m** | Float | 10m 고도 남북 바람 (V) | ERA5 기상 데이터 |
+| **temperature_2m** | Float | 지상 2m 기온 | ERA5 기상 데이터 |
+| **total_precipitation** | Float | 총 강수량 | ERA5 기상 데이터 |
+| **ws_925** | Float | 925hPa 고도 순풍지원 성분 | 파생 변수 (수식 참고) |
+| **lapse_rate** | Float | 925hPa - 700hPa 기온 감률 | 파생 변수 (대기불안정도) |
+| **is_moving** | Boolean | 이동 여부 플래그 | `ground_speed > 1 m/s` |
+| **daylength_h** | Float | 정밀 계산된 일조시간 | `astral` 라이브러리 활용 |
+| **is_interpolated_gps** | Binary | GPS 보간 여부 | 보간 시 1, 원본 데이터 시 0 |
+| **is_interpolated_era5** | Binary | ERA5 보간 여부 | 보간 시 1, 원본 데이터 시 0 |
 
 ---
 
