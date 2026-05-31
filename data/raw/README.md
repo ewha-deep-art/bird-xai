@@ -6,8 +6,8 @@
 
 | 파일명 | 설명 |
 |--------|------|
-| `North_Sea_population_tracks_of_greater_white-fronted_geese_2014-2017.csv` | GPS 원본 |
-| `era5_geese/era5_geese_YYYY_MM.nc` | ERA5 기후 데이터 |
+| `movebank/North_Sea_population_tracks_of_greater_white-fronted_geese_2014-2017.csv` | GPS 원본 |
+| `era5/era5_geese/era5_geese_YYYY_MM.nc` | ERA5 기후 데이터 |
 
 
 ## 데이터 접근

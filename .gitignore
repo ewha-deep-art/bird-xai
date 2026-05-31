@@ -6,12 +6,11 @@
 data/raw/era5/**/*
 !data/raw/era5/.gitkeep
 
-# data/raw/era5_geese 폴더 (거위 ERA5 데이터)
-data/raw/era5_geese/**/*
-!data/raw/era5_geese/.gitkeep
-
-# data/raw GPS 원본 CSV
-data/raw/*.csv
+# data/raw/era5 폴더
+data/raw/era5/**/*
+!data/raw/era5/.gitkeep
+data/raw/movebank/**/*
+!data/raw/movebank/.gitkeep
 
 # data/processed 대용량 파일
 data/processed/*.csv

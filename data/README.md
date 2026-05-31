@@ -7,6 +7,14 @@
 외부에서 수집한 원본 데이터를 보관합니다.
 용량 문제로 Git에 포함하지 않으며, Google Drive에서 관리합니다.
 파일 목록 및 접근 링크는 [raw/README.md](raw/README.md)를 참고하세요.
+```
+raw/
+├── movebank/    ← GPS 원본 (Movebank)
+│   └── .gitkeep
+├── era5/        ← ERA5 기후 데이터 (CDS)
+│   └── .gitkeep
+└── README.md
+```
 
 ### `processed/`
 전처리 파이프라인이 생성한 학습용 산출물을 보관합니다.
