@@ -4,14 +4,15 @@ from __future__ import annotations
 
 from typing import Annotated, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, TypeAdapter
+from pydantic import BaseModel, ConfigDict, Field
 
 # ---------------------------------------------------------------------------
 # Enum
 # ---------------------------------------------------------------------------
 
 SCHEMA_VERSION = "1.0.0"
-AttributionFeatureKey = Literal["daylength_h", "ws_925", "q_850"] # NOTE: 변경 가능
+AttributionFeatureKey = Literal["daylength_h", "ws_925", "q_850"] # NOTE: XAI 대상이 되는 특성. 변경 가능
+OverrideKey = Literal["message_cnt"] # NOTE: 인터랙션 입력 키
 
 # ---------------------------------------------------------------------------
 # Shared types
@@ -51,7 +52,6 @@ class XaiResult(BaseModel):
 
     attributions: dict[AttributionFeatureKey, float]  # type: ignore[valid-type]
 
-
 # ---------------------------------------------------------------------------
 # Server → Unity messages
 # ---------------------------------------------------------------------------
@@ -67,7 +67,7 @@ class FrameMessage(BaseModel):
     candidates: list[CandidatePath]
     xai: XaiResult
     boids: list[BoidAgent] | None = None
-    applied_overrides: dict[AttributionFeatureKey, float] | None = None  # type: ignore[valid-type]
+    applied_overrides: dict[OverrideKey, int] | None = None  # type: ignore[valid-type]
 
 
 class ErrorMessage(BaseModel):
@@ -81,20 +81,3 @@ ServerMessage = Annotated[
     FrameMessage | ErrorMessage,
     Field(discriminator="message_type"),
 ]
-
-# ---------------------------------------------------------------------------
-# Unity → Server events
-# ---------------------------------------------------------------------------
-
-
-class ControlsSetEvent(BaseModel):
-    schema_version: str
-    message_type: Literal["controls.set"]
-    overrides: dict[AttributionFeatureKey, float]  # type: ignore[valid-type]
-
-
-_interaction_adapter: TypeAdapter[ControlsSetEvent] = TypeAdapter(ControlsSetEvent)
-
-
-def parse_interaction_event(payload: dict) -> ControlsSetEvent:
-    return _interaction_adapter.validate_python(payload)

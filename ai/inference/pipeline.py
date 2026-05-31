@@ -7,15 +7,15 @@ from captum.attr import IntegratedGradients
 
 from ai.common import DEVICE, FEATURES, TARGET_FEATURES, TARGET_SCALER_PATH, test_loader
 from ai.common.models import (
-    CandidatePath,
     FrameMessage,
     Point,
     AttributionFeatureKey,
+    OverrideKey,
     XaiResult,
 )
 from ai.training.model import load_model_with_state
 
-QUEUE_REFILL_THRESHOLD = 10
+QUEUE_REFILL_THRESHOLD = 32
 
 
 class BirdPipeline:
@@ -25,7 +25,7 @@ class BirdPipeline:
         self._loader_iter = cycle(test_loader)  # NOTE: test_loader가 크다면 메모리 부담 있음
         self._queue: deque[tuple[Point, XaiResult]] = deque()
         self._pending_queue: deque[tuple[Point, XaiResult]] | None = None
-        self._last_overrides: dict | None = None
+        self._last_overrides: dict[OverrideKey, int] | None = None
         self.model = load_model_with_state()
         self.target_scaler = joblib.load(TARGET_SCALER_PATH)
         self.ig = IntegratedGradients(self.model)
@@ -48,7 +48,7 @@ class BirdPipeline:
                 attrs = self.ig.attribute(
                     X,
                     target=(t, target_idx),
-                    n_steps=50,
+                    n_steps=10, # 지연 줄이기 위해 10으로 설정
                     return_convergence_delta=False,
                 )
                 total_attrs = attrs if total_attrs is None else total_attrs + attrs
@@ -67,11 +67,11 @@ class BirdPipeline:
             results.append(XaiResult(attributions=normalized))
         return results
     
-    def _apply_overrides_to_input(self, X, overrides: dict) -> ...:
+    def _apply_overrides_to_input(self, X, overrides: dict[OverrideKey, int]) -> ...:
         # TODO: overrides 값으로 X의 wind_speed, wind_direction 피처 수정
         return X
 
-    def _build_queue(self, overrides: dict | None) -> deque[tuple[Point, XaiResult]]:
+    def _build_queue(self, overrides: dict[OverrideKey, int] | None) -> deque[tuple[Point, XaiResult]]:
         X, _ = next(self._loader_iter)
         if overrides:
             X = self._apply_overrides_to_input(X, overrides)
@@ -79,24 +79,32 @@ class BirdPipeline:
         xai_results = self.apply_xai(X)
         return deque(zip(points, xai_results))
 
-    def build_frame(self, *, overrides: dict | None = None) -> FrameMessage:
-        if overrides != self._last_overrides and self._pending_queue is None:
-            self._pending_queue = self._build_queue(overrides)
-            self._last_overrides = overrides
-
+    def build_frame_from_queue(self) -> tuple[FrameMessage, bool]:
+        """큐에서 바로 꺼내기만 함. 블로킹 없음."""
+        swapped = False
+        # pending이 완료됐으면 교체
         if self._pending_queue is not None:
             self._queue = self._pending_queue
             self._pending_queue = None
-
-        if len(self._queue) < QUEUE_REFILL_THRESHOLD:
-            self._queue.extend(self._build_queue(overrides))
+            swapped = True
 
         position, xai_result = self._queue.popleft()
-
         return FrameMessage(
             position=position,
-            predicted_path=[p for p, _ in self._queue],  # position 이후의 경로
-            candidates=[], # TODO: 모델 구조 바꿔서 채우기
+            predicted_path=[p for p, _ in self._queue],
+            candidates=[],
             xai=xai_result,
-            applied_overrides=overrides or None,
-        )
+            applied_overrides=self._last_overrides,
+        ), swapped
+
+    def set_pending_queue(self, queue: deque, overrides: dict[OverrideKey, int] | None) -> None:
+        """백그라운드 빌드 완료 후 호출."""
+        self._pending_queue = queue
+        self._last_overrides = overrides
+
+    def build_queue_blocking(self, overrides: dict[OverrideKey, int] | None) -> deque:
+        """executor에서만 호출. 블로킹 OK."""
+        return self._build_queue(overrides)
+
+    def needs_prefill(self) -> bool:
+        return len(self._queue) < QUEUE_REFILL_THRESHOLD and self._pending_queue is None
