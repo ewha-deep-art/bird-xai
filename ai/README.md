@@ -1,30 +1,42 @@
 # ai/
 
-이 디렉토리는 프로젝트의 Python 기반 AI 파이프라인을 담습니다. 학습, 추론, Unity 전달용 서버가 이 안에서 단계적으로 연결됩니다.
+Python AI 파이프라인: 학습 → 추론 → FastAPI 서버. Unity는 `render/`에서 WebSocket으로 frame을 수신합니다.
+
+## 흐름
+
+```text
+data/processed + model/weights/bird_best.pt
+  → training/     (학습·가중치)
+  → inference/    (BirdPipeline: predict + Captum IG + queue)
+  → server/       (/ws frame, /wish override, /wind-and-wish)
+```
 
 ## 구성
 
-- `training/`
-  - 데이터 전처리와 모델 학습
-- `inference/`
-  - 학습된 모델을 사용한 예측, XAI, 군집 시뮬레이션
-- `server/`
-  - 추론 결과를 Unity에 전달하는 서버 레이어
-- `common/`
-  - 공통 상수 및 경로
-  - Python 계약 Pydantic 모델
-- `config.py`
-  - 서버 설정 (`BIRD_XAI_*` 환경변수)
+| 경로 | 역할 |
+|---|---|
+| `common/` | 상수·경로 (`__init__.py`), Pydantic 메시지 (`models.py`) |
+| `config.py` | 서버 env (`BIRD_XAI_*`) |
+| `training/` | `BirdForecastLSTM`, `train.py`, `experiment.py`, `model/weights/` |
+| `inference/` | `BirdPipeline` (`pipeline.py`) |
+| `server/` | FastAPI, WebSocket, 관람 HTTP |
 
-## 주요 기술
+## 메시지·계약
 
-- `pandas`, `numpy`, `scipy`, `xarray`
-- `PyTorch`
-- `shap`
-- `FastAPI`, `Pydantic`, `WebSocket`
+- `models.py`: `FrameMessage`, `ErrorMessage`, `WishRequest`, `WishResponse` 등
+- Unity `WS /ws` JSON Schema: [contracts/](../contracts/)
 
-## 관련 문서
+## CLI
+
+```bash
+uv run bird-xai-train          # 학습
+uv run bird-xai-server         # 서버
+uv run bird-xai-ws-smoke       # smoke test
+```
+
+## 관련
 
 - [training/README.md](training/README.md)
 - [inference/README.md](inference/README.md)
 - [server/README.md](server/README.md)
+- [AGENTS.md](../AGENTS.md) — 구현 스냅샷

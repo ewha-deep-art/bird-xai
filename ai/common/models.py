@@ -11,7 +11,7 @@ from pydantic import BaseModel, ConfigDict, Field
 # ---------------------------------------------------------------------------
 
 SCHEMA_VERSION = "1.0.0"
-AttributionFeatureKey = Literal["daylength_h", "ws_925", "q_850"]  # NOTE: XAI 대상이 되는 특성. 변경 가능
+AttributionFeatureKey = Literal["tailwind", "headwind", "weather_key"]
 OverrideKey = Literal["message_cnt"] # NOTE: 인터랙션 입력 키
 
 # ---------------------------------------------------------------------------
@@ -95,5 +95,4 @@ class WishRequest(BaseModel):
 
 class WishResponse(BaseModel):
     status: Literal["ok"]
-    backend: str
     subject_id: str

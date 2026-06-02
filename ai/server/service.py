@@ -33,52 +33,45 @@ class ServerService:
 
     async def iter_frames(self) -> AsyncGenerator[FrameMessage, None]:
         loop = asyncio.get_running_loop()
+        pipeline = self.pipeline
         pending_build_task: asyncio.Task | None = None
-        current_overrides: dict | None = None
+        active_overrides: dict[OverrideKey, int] | None = self.parse_overrides()
 
-        initial_queue = await loop.run_in_executor(
-            None,
-            functools.partial(self.pipeline.build_queue_blocking, None),
-        )
-        self.pipeline._queue = initial_queue
+        async def run_build(overrides: dict[OverrideKey, int] | None):
+            return await loop.run_in_executor(
+                None,
+                functools.partial(pipeline.build_queue, overrides),
+            )
+
+        pipeline._queue = await run_build(active_overrides)
+        if active_overrides is not None:
+            pipeline._last_overrides = active_overrides
 
         while True:
             new_overrides = self.parse_overrides()
             if new_overrides is not None:
-                current_overrides = new_overrides
+                active_overrides = new_overrides
 
-            if (
-                current_overrides != self.pipeline._last_overrides
-                and (pending_build_task is None or pending_build_task.done())
-            ):
-                overrides_snapshot = current_overrides
+            can_schedule = pending_build_task is None or pending_build_task.done()
 
-                async def _build_and_set(ov=overrides_snapshot):
-                    q = await loop.run_in_executor(
-                        None,
-                        functools.partial(self.pipeline.build_queue_blocking, ov),
-                    )
-                    self.pipeline.set_pending_queue(q, ov)
+            if active_overrides != pipeline._last_overrides and can_schedule:
+                ov = active_overrides
 
-                pending_build_task = asyncio.create_task(_build_and_set())
+                async def swap_pending():
+                    pipeline._pending_queue = await run_build(ov)
+                    pipeline._last_overrides = ov
 
-            if (
-                self.pipeline.needs_prefill()
-                and (pending_build_task is None or pending_build_task.done())
-            ):
-                async def _refill(ov=current_overrides):
-                    q = await loop.run_in_executor(
-                        None,
-                        functools.partial(self.pipeline.build_queue_blocking, ov),
-                    )
-                    self.pipeline._queue.extend(q)
+                pending_build_task = asyncio.create_task(swap_pending())
 
-                pending_build_task = asyncio.create_task(_refill())
+            elif pipeline.needs_prefill() and can_schedule:
+                ov = active_overrides
 
-            frame, swapped = self.pipeline.build_frame_from_queue()
-            if swapped:
-                current_overrides = None
-            yield frame
+                async def extend_queue():
+                    pipeline._queue.extend(await run_build(ov))
+
+                pending_build_task = asyncio.create_task(extend_queue())
+
+            yield pipeline.build_frame_from_queue()
 
     def update_overrides(self) -> None:
         self.message_counter += 1

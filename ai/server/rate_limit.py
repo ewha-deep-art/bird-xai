@@ -17,24 +17,18 @@ def client_ip(request: Request) -> str:
     return request.client.host
 
 
-def _wish_limit_string(interval_sec: float) -> str:
-    """Build a limits-compatible rate string (rejects float decimals like 5.0)."""
-    whole = int(interval_sec)
-    if whole <= 0:
-        return ""
-    if whole != interval_sec:
-        raise ValueError(
-            f"BIRD_XAI_WISH_RATE_LIMIT_SEC must be a whole number of seconds, got {interval_sec!r}"
-        )
-    return f"1/{whole} second"
-
-
 class RateLimiter:
     def __init__(self, *, interval_sec: float) -> None:
         self._enabled = interval_sec > 0
         if self._enabled:
+            whole = int(interval_sec)
+            if whole != interval_sec:
+                raise ValueError(
+                    "BIRD_XAI_WISH_RATE_LIMIT_SEC must be a whole number of seconds, "
+                    f"got {interval_sec!r}"
+                )
             self._limiter = MovingWindowRateLimiter(MemoryStorage())
-            self._limit = parse(_wish_limit_string(interval_sec))
+            self._limit = parse(f"1/{whole} second")
 
     def __call__(self, request: Request) -> None:
         if not self._enabled:

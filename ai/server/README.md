@@ -1,31 +1,39 @@
 # ai/server/
 
-Bird XAI의 전달 레이어입니다. FastAPI + WebSocket 기반으로 Unity와 통신합니다.
+Bird XAI의 전달 레이어입니다. FastAPI + WebSocket으로 Unity에 frame을 보내고, HTTP로 관람 입력을 받습니다.
 
 ## 엔드포인트
 
-- `GET /health` — backend 상태 및 subject 확인
-- `GET /wind-and-wish` — QR 관람 웹 (정적 HTML)
-- `POST /wish` — 관람객 메시지 수신 (JSON body). 누적 시 `message_cnt` → `ws_850` override
-- `WS /ws` — Unity로 `frame` 주기 전송
+| 메서드 | 경로 | 용도 |
+|---|---|---|
+| `GET` | `/health` | 파이프라인 기동 여부·`subject_id` |
+| `GET` | `/wind-and-wish` | QR 관람 웹 (정적 HTML) |
+| `POST` | `/wish` | 관람 메시지 → `message_cnt` 누적 |
+| `WS` | `/ws` | Unity로 `frame` 주기 전송 |
 
-## WebSocket 흐름
+### `GET /health`
 
-연결 직후 서버가 `frame`을 주기적으로 전송합니다.
-
+```json
+{ "status": "ok", "subject_id": "White-fronted Goose" }
 ```
-connect → server: frame, frame, frame, ...  (frame_interval 초 간격)
-```
 
-`frame` 메시지 구조는 `contracts/schemas/frame.schema.json` 참조.
+기동 실패 시: `{ "status": "error", "detail": "..." }`
 
-## 관람객 입력 (`POST /wish` v1)
+### `POST /wish` (v1)
 
-JSON body `{ "message": "..." }` (1–50자, 본문 저장 없음).
+요청: `{ "message": "..." }` (1–50자, 본문 저장 없음)
+
+응답: `{ "status": "ok", "subject_id": "White-fronted Goose" }`
+
+타입: [`ai/common/models.py`](../common/models.py) — `WishRequest`, `WishResponse`
+
+운영 규칙:
 
 - 비어 있거나 50자 초과 → **400**
-- 동일 IP 5초 내 재요청 → **429**
-- 전역 `message_cnt` 누적, **≥10건 flush** → `ws_850` override → counter reset
+- 동일 IP 5초 내 재요청 → **429** (`BIRD_XAI_WISH_RATE_LIMIT_SEC`, `0`이면 비활성)
+- 전역 `message_cnt` 누적, **≥ flush threshold**(기본 10) → `ws_850` override → counter reset
+- flush된 override는 **다음 batch swap + 이후 refill까지 유지**
+- `/ws` 연결 전 wish도 **첫 batch**에 반영 (`parse_overrides` 1회)
 
 ```bash
 curl -X POST http://127.0.0.1:8080/wish \
@@ -33,33 +41,38 @@ curl -X POST http://127.0.0.1:8080/wish \
   -d '{"message":"바람"}'
 ```
 
-계약: `contracts/schemas/wish.schema.json`, `contracts/examples/wish.sample.json`
+### `WS /ws`
 
-## 관람객 웹 (`GET /wind-and-wish`)
+연결 직후 서버가 `frame`을 `frame_interval` 초 간격으로 전송합니다. 수신 JSON은 사용하지 않습니다 (연결 유지용).
 
-QR 코드 → `/wind-and-wish` → `POST /wish`. 한국어 미니멀 UI.
+```
+connect → server: frame, frame, frame, ...
+```
+
+`frame` 구조: [contracts/schemas/frame.schema.json](../../contracts/schemas/frame.schema.json)
+
+## 관람 웹 (`GET /wind-and-wish`)
+
+QR → `/wind-and-wish` → `POST /wish`. 한국어 미니멀 UI.
 
 ```bash
-# 브라우저
 open http://127.0.0.1:8080/wind-and-wish
 ```
 
-정적 파일: [`static/participate.html`](static/participate.html) (목업 → [`docs/visitor_web_demo.png`](../../docs/visitor_web_demo.png))
+정적 파일: [`static/participate.html`](static/participate.html)
 
-## 메시지 타입 (서버 → Unity)
+## 서버 → Unity 메시지
 
 | 타입 | 설명 |
 |---|---|
-| `frame` | 예측 경로 + XAI. `candidates=[]`, `boids=null` |
-| `error` | 서버 오류 (`startup_error`, `bad_request`, `pipeline_error`) |
+| `frame` | 예측 경로 + XAI (`candidates=[]`, `boids=null`) |
+| `error` | `startup_error`, `bad_request`, `pipeline_error` |
 
 ## 실행
 
 ```bash
 uv run bird-xai-server
 ```
-
-환경 변수:
 
 | 변수 | 기본값 | 설명 |
 |---|---|---|
@@ -69,21 +82,21 @@ uv run bird-xai-server
 | `BIRD_XAI_WISH_RATE_LIMIT_SEC` | `5.0` | `/wish` IP당 최소 간격(초). `0`이면 비활성 |
 | `BIRD_XAI_WISH_FLUSH_THRESHOLD` | `10` | flush 전 누적 wish 건수 |
 
-## 배포
-
-배포 runbook → [docs/deploy.md](../../docs/deploy.md)
-
 ## 파일 구조
 
 | 파일 | 역할 |
 |---|---|
-| `app.py` | FastAPI 앱, `/health`, `/wind-and-wish`, `/wish`, WebSocket |
-| `service.py` | ML 파이프라인 연동, `iter_frames()`, `subject_id` |
-| `rate_limit.py` | IP rate limit (`limits`, FastAPI `Depends`) |
-| `static/participate.html` | QR 관람 웹 (단일 HTML) |
+| `app.py` | FastAPI, 라우트, WebSocket send loop |
+| `service.py` | `BirdPipeline` 연동, `iter_frames()`, wish flush·refill 스케줄 |
+| `rate_limit.py` | IP rate limit (`limits`) |
+| `static/participate.html` | QR 관람 웹 |
 
-## 관련 디렉토리
+## 배포·검증
 
-- 계약 및 스키마: [contracts/README.md](../../contracts/README.md)
-- 추론 파이프라인: [ai/inference/README.md](../inference/README.md)
-- 배포: [docs/deploy.md](../../docs/deploy.md)
+- Runbook: [docs/deploy.md](../../docs/deploy.md)
+- Smoke: [tests/README.md](../../tests/README.md) — CI에서는 `BIRD_XAI_WISH_RATE_LIMIT_SEC=0` 권장
+
+## 관련
+
+- [ai/inference/README.md](../inference/README.md)
+- [contracts/README.md](../../contracts/README.md)
