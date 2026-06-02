@@ -20,79 +20,16 @@
     { "lat": 37.6501, "lon": 127.0404, "altitude_m": 342.0 },
     { "lat": 37.6579, "lon": 127.0461, "altitude_m": 340.0 }
   ],
-  "candidates": [
-    {
-      "path_id": "c1",
-      "score": 0.54,
-      "points": [
-        { "lat": 37.5721, "lon": 126.9834, "altitude_m": 318.0 },
-        { "lat": 37.5810, "lon": 126.9900, "altitude_m": 325.0 },
-        { "lat": 37.5899, "lon": 126.9966, "altitude_m": 332.0 },
-        { "lat": 37.5988, "lon": 127.0032, "altitude_m": 337.0 },
-        { "lat": 37.6077, "lon": 127.0098, "altitude_m": 341.0 },
-        { "lat": 37.6166, "lon": 127.0164, "altitude_m": 343.0 },
-        { "lat": 37.6255, "lon": 127.0230, "altitude_m": 344.0 },
-        { "lat": 37.6344, "lon": 127.0296, "altitude_m": 344.0 },
-        { "lat": 37.6433, "lon": 127.0362, "altitude_m": 343.0 },
-        { "lat": 37.6522, "lon": 127.0428, "altitude_m": 341.0 },
-        { "lat": 37.6611, "lon": 127.0494, "altitude_m": 339.0 },
-        { "lat": 37.6700, "lon": 127.0560, "altitude_m": 337.0 }
-      ]
-    },
-    {
-      "path_id": "c2",
-      "score": 0.31,
-      "points": [
-        { "lat": 37.5700, "lon": 126.9820, "altitude_m": 315.0 },
-        { "lat": 37.5770, "lon": 126.9875, "altitude_m": 320.0 },
-        { "lat": 37.5840, "lon": 126.9930, "altitude_m": 326.0 },
-        { "lat": 37.5910, "lon": 126.9985, "altitude_m": 331.0 },
-        { "lat": 37.5980, "lon": 127.0040, "altitude_m": 335.0 },
-        { "lat": 37.6050, "lon": 127.0095, "altitude_m": 338.0 },
-        { "lat": 37.6120, "lon": 127.0150, "altitude_m": 340.0 },
-        { "lat": 37.6190, "lon": 127.0205, "altitude_m": 341.0 },
-        { "lat": 37.6260, "lon": 127.0260, "altitude_m": 341.0 },
-        { "lat": 37.6330, "lon": 127.0315, "altitude_m": 340.0 },
-        { "lat": 37.6400, "lon": 127.0370, "altitude_m": 338.0 },
-        { "lat": 37.6470, "lon": 127.0425, "altitude_m": 336.0 }
-      ]
-    },
-    {
-      "path_id": "c3",
-      "score": 0.15,
-      "points": [
-        { "lat": 37.5680, "lon": 126.9810, "altitude_m": 310.0 },
-        { "lat": 37.5740, "lon": 126.9860, "altitude_m": 316.0 },
-        { "lat": 37.5800, "lon": 126.9910, "altitude_m": 322.0 },
-        { "lat": 37.5860, "lon": 126.9960, "altitude_m": 327.0 },
-        { "lat": 37.5920, "lon": 127.0010, "altitude_m": 331.0 },
-        { "lat": 37.5980, "lon": 127.0060, "altitude_m": 334.0 },
-        { "lat": 37.6040, "lon": 127.0110, "altitude_m": 336.0 },
-        { "lat": 37.6100, "lon": 127.0160, "altitude_m": 337.0 },
-        { "lat": 37.6160, "lon": 127.0210, "altitude_m": 337.0 },
-        { "lat": 37.6220, "lon": 127.0260, "altitude_m": 336.0 },
-        { "lat": 37.6280, "lon": 127.0310, "altitude_m": 334.0 },
-        { "lat": 37.6340, "lon": 127.0360, "altitude_m": 332.0 }
-      ]
-    }
-  ],
+  "candidates": [],
   "xai": {
     "attributions": {
-      "wind_speed": 1.0,
-      "wind_direction": 0.68
+      "tailwind": 0.42,
+      "headwind": 0.0,
+      "weather_key": 0.18
     }
   },
-  "boids": [
-    {
-      "agent_id": "b1",
-      "position": { "lat": 37.5630, "lon": 126.9760, "altitude_m": 308.0 },
-      "velocity": { "east": 4.2, "north": 3.1 }
-    },
-    {
-      "agent_id": "b2",
-      "position": { "lat": 37.5655, "lon": 126.9795, "altitude_m": 315.0 },
-      "velocity": { "east": 4.5, "north": 2.9 }
-    }
-  ],
-  "applied_overrides": null
+  "boids": null,
+  "applied_overrides": {
+    "message_cnt": 12
+  }
 }

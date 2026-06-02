@@ -11,7 +11,7 @@ from pydantic import BaseModel, ConfigDict, Field
 # ---------------------------------------------------------------------------
 
 SCHEMA_VERSION = "1.0.0"
-AttributionFeatureKey = Literal["daylength_h", "ws_925", "q_850"] # NOTE: XAI 대상이 되는 특성. 변경 가능
+AttributionFeatureKey = Literal["daylength_h", "ws_925", "q_850"]  # NOTE: XAI 대상이 되는 특성. 변경 가능
 OverrideKey = Literal["message_cnt"] # NOTE: 인터랙션 입력 키
 
 # ---------------------------------------------------------------------------
@@ -28,7 +28,7 @@ class Point(BaseModel):
     lon: float
     altitude_m: float
 
-# NOTE: boid 알고리즘 적용 Unity에서 진행될 경우 삭제
+# NOTE: Boids는 Unity에서 로컬 계산. 서버 frame은 항상 boids=null.
 class BoidVelocity(BaseModel):
     model_config = ConfigDict(frozen=True)
 
@@ -81,3 +81,19 @@ ServerMessage = Annotated[
     FrameMessage | ErrorMessage,
     Field(discriminator="message_type"),
 ]
+
+# ---------------------------------------------------------------------------
+# Visitor → Server (HTTP)
+# ---------------------------------------------------------------------------
+
+
+class WishRequest(BaseModel):
+    """POST /wish JSON body. Message text is not stored (v1)."""
+
+    message: str = Field(..., min_length=1, max_length=50)
+
+
+class WishResponse(BaseModel):
+    status: Literal["ok"]
+    backend: str
+    subject_id: str
