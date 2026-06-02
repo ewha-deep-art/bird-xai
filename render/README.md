@@ -1,35 +1,33 @@
 # render/
 
-이 디렉토리는 Unity 기반 렌더링과 관객 인터랙션을 담당합니다. Python 서버가 전달한 경로, 설명 값, 군집 상태를 실제 시각 경험으로 바꾸는 레이어입니다.
+Unity 기반 렌더링 레이어입니다. Python 서버 `/ws`에서 받은 frame을 시각화하고, Boids 군집은 Unity에서 로컬 계산합니다.
 
 ## 역할
 
-- 대표 경로와 후보 경로 시각화
-- XAI 값을 색, 밝기, 두께, 움직임으로 번역
-- 군집 시뮬레이션 결과를 파티클 표현으로 변환
-- 관객 인터랙션을 입력 이벤트로 수집해 서버로 전달
+- `predicted_path`·`position` 경로 시각화
+- XAI attribution을 색·밝기 등으로 표현
+- Unity VFX Graph 파티클 / Boids (`frame.boids`는 `null`, 로컬 계산)
 
-## 사용할 기술
+## repo
 
-- `Unity`
-  - 장면 구성과 런타임 제어
-- `VFX Graph`
-  - 대규모 파티클 렌더링
-- `C#`
-  - WebSocket 수신, 데이터 파싱, 인터랙션 로직
+- `render/` Unity 프로젝트 루트 (에셋·SampleScene)
+- WebGL·`/ws` 클라이언트: [docs/unimplemented.md](../docs/unimplemented.md) B항
 
-## 입력 데이터
+## 서버에서 수신하는 frame 필드
 
-- 대표 경로
-- 후보 경로
-- feature 기여도 값
-- 군집 개체 위치
-- 현재 환경 변수 상태
+- `position`, `predicted_path[]`
+- `xai.attributions` (`tailwind`, `headwind`, `weather_key`)
+- `applied_overrides.message_cnt` (선택)
+- `candidates`: 항상 `[]`
+- `boids`: 항상 `null`
 
-## 출력 경험
+## 사용 기술
 
-- 벽면 또는 스크린에 투사되는 실시간 시각화
-- 관객의 조작에 따라 즉시 갱신되는 경로 변화
-- 설명 값과 경로 변화가 함께 보이는 인터랙티브 장면
+- Unity 2022 LTS, VFX Graph, C#
+- WebSocket client → `WS /ws`
 
-서버 전달 형식은 [ai/server/README.md](../ai/server/README.md), 계약 문서는 [contracts/README.md](../contracts/README.md)를 참고하세요.
+## 관련
+
+- [ai/server/README.md](../ai/server/README.md)
+- [contracts/README.md](../contracts/README.md) — `frame` JSON Schema
+- [docs/unimplemented.md](../docs/unimplemented.md) — WebGL `/`, C# B항

@@ -6,7 +6,6 @@ import argparse
 import asyncio
 import json
 import sys
-from typing import Any
 from urllib.parse import urlparse, urlunparse
 
 import httpx
@@ -18,10 +17,6 @@ from ai.common.models import SCHEMA_VERSION, FrameMessage, ServerMessage
 _server_message_adapter: TypeAdapter[ServerMessage] = TypeAdapter(ServerMessage)
 
 
-def parse_server_message(payload: dict[str, Any]) -> ServerMessage:
-    return _server_message_adapter.validate_python(payload)
-
-
 def ws_url_from_base(base_url: str) -> str:
     parsed = urlparse(base_url)
     scheme = "wss" if parsed.scheme == "https" else "ws"
@@ -31,7 +26,7 @@ def ws_url_from_base(base_url: str) -> str:
 async def _receive_validated_message(socket, *, timeout: float) -> ServerMessage:
     raw = await asyncio.wait_for(socket.recv(), timeout=timeout)
     payload = json.loads(raw)
-    message = parse_server_message(payload)
+    message = _server_message_adapter.validate_python(payload)
     print(f"<= {message.message_type}")
     return message
 
@@ -139,7 +134,7 @@ async def run_smoke_test(
         frame = _expect_frame(await _receive_validated_message(socket, timeout=timeout))
         expected_xai = {"tailwind", "headwind", "weather_key"}
         if set(frame.xai.attributions.keys()) != expected_xai:
-            raise RuntimeError(f"Expected xai keys {expected_xai}, got {set(frame.xai.attributions)}")
+            raise RuntimeError(f"Expected xai keys {expected_xai}, got {set(frame.xai.attributions.keys())}")
         print(
             "Bootstrap OK:"
             f" schema={SCHEMA_VERSION}"
@@ -154,6 +149,7 @@ async def run_smoke_test(
                 print(
                     f"frame {i + 1}:"
                     f" position=({frame.position.lat:.4f},{frame.position.lon:.4f})"
+                    f" xai_features={frame.xai.attributions}"
                     f" applied_overrides={frame.applied_overrides}"
                 )
 
