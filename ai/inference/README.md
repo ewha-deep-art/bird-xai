@@ -1,51 +1,57 @@
 # ai/inference/
 
-이 디렉토리는 프로젝트의 실시간 추론(inference) 파이프라인을 담당합니다.  
-학습된 모델을 기반으로 새의 위치를 예측하고, XAI(설명 가능 AI) 결과와 함께 프레임 단위 데이터로 가공하여 전달합니다.
-
-현재 구현은 `BirdPipeline` 중심의 단일 파이프라인 구조로 구성되어 있으며, 예측 결과를 queue 기반으로 관리합니다.
-
----
+학습된 `BirdForecastLSTM`으로 **미래 12 step** 경로를 예측하고, step별 Captum IG XAI를 계산해 `FrameMessage`를 생성합니다.
 
 ## 주요 역할
 
-- 학습된 모델 및 scaler 로드
-- 입력 시퀀스 기반 위치 예측
-- Integrated Gradients 기반 feature attribution 계산
-- 프레임 단위 메시지 생성
-- predicted path queue 관리
-- override 입력 반영 준비 구조 제공
-
----
+- `BirdForecastLSTM` + scaler 로드 (`feat_scaler.pkl`, `delta_scaler.pkl`)
+- 과거 24 step 입력 → 미래 12 point 절대 좌표 예측 (Δ 역변환 후 누적)
+- 미래 horizon step별 IG attribution (0–1 정규화, 12개)
+- IG 내부 특성: `ws_850`, `t_850`, `q_850`, `lapse_rate` → Unity 3키: `tailwind` / `headwind` / `weather_key` (`weather_key` ← `lapse_rate`)
+- queue 기반 frame 생성 (관측 position + 12 future)
+- `message_cnt` override → `ws_850` 입력 반영
 
 ## 내부 구성
 
-- `pipeline.py`
-  - 추론 전체 흐름 관리
-  - queue 기반 frame 생성
-  - prediction + XAI orchestration 수행
+- `pipeline.py` — `BirdPipeline` (예측 + XAI + queue + `build_frame_from_queue`)
 
----
-
-## 현재 파이프라인 구조
+## 파이프라인
 
 ```text
-test_loader
+test_loader (batch=1 slice)
     ↓
-BirdPipeline._build_queue()
-    ├── predict()
-    │     └── 위치(lat, lon, altitude) 예측
-    │
-    └── apply_xai()
-          └── Integrated Gradients attribution 계산
+BirdPipeline.build_queue(overrides?)
+    ├── predict(X, last_obs)  → 12 future Point (절대 좌표)
+    └── apply_xai(X)          → 12 XaiResult (미래 step별)
     ↓
-(queue 저장)
+queue: [(last_obs, xai_0), (f1, xai_0), (f2, xai_1), …, (f12, xai_11)]
     ↓
-build_frame()
-    ↓
-FrameMessage 반환
+build_frame_from_queue() → FrameMessage
+    (candidates=[], boids=null)
 ```
 
-## 관련 디렉토리
-- 서버 전달 레이어: [ai/server/README.md](../server/README.md)
-- 계약 및 스키마: [contracts/README.md](../../contracts/README.md)
+## 큐·refill
+
+| 상수 / 동작 | 값·설명 |
+|---|---|
+| `QUEUE_REFILL_THRESHOLD` | `14` — 큐 길이가 이보다 작으면 백그라운드 refill (`service.py`가 스케줄) |
+| override batch | `message_cnt` flush 시 `build_queue`로 **pending queue** 생성 → 다음 dequeue 시 swap |
+| refill | 동일 `overrides`로 `build_queue` 후 기존 큐 **extend** |
+
+세부 latency·운영 튜닝 → [docs/server-queue-latency.md](../../docs/server-queue-latency.md)
+
+## Frame 출력
+
+| 필드 | 값 |
+|---|---|
+| `position` | 관측 또는 예측 좌표 (절대 lat/lon/altitude_m) |
+| `predicted_path` | 남은 미래 예측 point |
+| `xai.attributions` | `tailwind`, `headwind`, `weather_key` |
+| `candidates` | 항상 `[]` |
+| `boids` | 항상 `null` (Unity 로컬 Boids) |
+| `applied_overrides` | flush 시 `message_cnt` |
+
+## 관련
+
+- [ai/server/README.md](../server/README.md) — `iter_frames()`, wish flush
+- [contracts/README.md](../../contracts/README.md) — Unity `WS /ws` JSON Schema

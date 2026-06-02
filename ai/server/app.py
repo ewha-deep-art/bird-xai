@@ -41,7 +41,6 @@ def create_app() -> FastAPI:
             }
         return {
             "status": "ok",
-            "backend": service.pipeline.backend_name,
             "subject_id": service.subject_id,
         }
 
@@ -53,7 +52,6 @@ def create_app() -> FastAPI:
         service.update_overrides()
         return WishResponse(
             status="ok",
-            backend=service.pipeline.backend_name,
             subject_id=service.subject_id,
         )
 

@@ -1,20 +1,61 @@
 import numpy as np
 import pandas as pd
 import torch
-from sklearn.preprocessing import MinMaxScaler
+from sklearn.preprocessing import MinMaxScaler, StandardScaler
 import joblib
 from torch.utils.data import DataLoader, TensorDataset
 
 from ai.common import (
-    DATASET_PATH, FEAT_SCALER_PATH, TARGET_SCALER_PATH,
-    TIMESTAMP_COL, ALL_FEATURES, TARGET_FEATURES, BIRDS
+    DATASET_PATH, FEAT_SCALER_PATH, DELTA_SCALER_PATH,
+    TIMESTAMP_COL, ALL_FEATURES, TARGET_FEATURES
 )
 
-def _make_windows(data: np.ndarray, window_size: int) -> np.ndarray:
-    """2D 배열을 슬라이딩 윈도우로 분할. (num_samples, F) → (num_windows, window_size, F)"""
-    assert window_size <= len(data), \
-        f"window_size({window_size})가 데이터 길이({len(data)})보다 클 수 없습니다."
-    return np.array([data[i:i + window_size] for i in range(len(data) - window_size + 1)])
+HEIGHT_CLIP_MIN = 0.0
+HEIGHT_CLIP_MAX = 2000.0
+# per-step Δ clip (lat/lon: degree, height_raw: m) — outlier가 scaler를 지배하지 않도록
+DELTA_CLIP = np.array([2.0, 2.0, 200.0], dtype=np.float64)
+
+
+def _clip_deltas(y: np.ndarray) -> np.ndarray:
+    return np.clip(y, -DELTA_CLIP, DELTA_CLIP)
+
+
+def absolute_to_delta(last_obs: np.ndarray, future_abs: np.ndarray) -> np.ndarray:
+    """절대 좌표 시퀀스를 step별 Δ로 변환. last_obs (3,), future_abs (M, 3) → (M, 3)."""
+    deltas = np.zeros_like(future_abs)
+    prev = last_obs.copy()
+    for k in range(len(future_abs)):
+        deltas[k] = future_abs[k] - prev
+        prev = future_abs[k]
+    return deltas
+
+
+def delta_to_absolute(last_obs: np.ndarray, deltas: np.ndarray) -> np.ndarray:
+    """Δ 시퀀스를 절대 좌표로 누적. last_obs (3,), deltas (M, 3) → (M, 3)."""
+    positions = np.zeros_like(deltas)
+    current = last_obs.copy()
+    for k in range(len(deltas)):
+        current = current + deltas[k]
+        positions[k] = current
+    return positions
+
+
+def _make_forecast_pairs(
+    X: np.ndarray, y: np.ndarray, input_len: int, horizon: int
+) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """과거 input_len step → 미래 horizon step Δ target 쌍 생성."""
+    pairs_X, pairs_y, pairs_last = [], [], []
+    for i in range(len(X) - input_len - horizon + 1):
+        pairs_X.append(X[i:i + input_len])
+        future_abs = y[i + input_len:i + input_len + horizon]
+        last_obs = y[i + input_len - 1]
+        pairs_y.append(absolute_to_delta(last_obs, future_abs))
+        pairs_last.append(last_obs)
+    if not pairs_X:
+        raise ValueError(
+            f"forecast pair 없음: len={len(X)}, input_len={input_len}, horizon={horizon}"
+        )
+    return np.array(pairs_X), np.array(pairs_y), np.array(pairs_last)
 
 
 def _extract_bird(data: pd.DataFrame, bird: str, features: list):
@@ -25,86 +66,118 @@ def _extract_bird(data: pd.DataFrame, bird: str, features: list):
 
     subset = data[data['bird'] == bird].sort_values(TIMESTAMP_COL).reset_index(drop=True)
 
-    # NaN을 이전 값으로 채움 (시계열 연속성 유지)
-    cols = features + TARGET_FEATURES
+    cols = list(dict.fromkeys(features + TARGET_FEATURES))
     nan_count = subset[cols].isna().sum().sum()
     if nan_count:
-        subset[cols] = subset[cols].ffill().bfill()
+        subset[cols] = subset[cols].ffill().bfill().fillna(0)
         print(f"[경고] {bird}: NaN {nan_count}개를 ffill로 채웠습니다.")
 
-    X = subset[features].values         # (num_samples, num_features)
-    y = subset[TARGET_FEATURES].values  # (num_samples, num_targets)
+    subset["height_raw"] = subset["height_raw"].clip(HEIGHT_CLIP_MIN, HEIGHT_CLIP_MAX)
+
+    X = subset[features].values
+    y = subset[TARGET_FEATURES].values
     return X, y
 
 
-def _collect_windows(data: pd.DataFrame, birds: list, features: list, window_size: int):
-    """여러 개체의 윈도우를 개체 경계 없이 각각 생성 후 concat."""
-    X_list, y_list = [], []
+def _collect_forecast_pairs(
+    data: pd.DataFrame, birds: list, features: list, input_len: int, horizon: int
+):
+    """여러 개체의 forecast pair를 생성 후 concat."""
+    X_list, y_list, last_list = [], [], []
     for bird in birds:
         X, y = _extract_bird(data, bird, features)
-        # 개체 내부에서만 윈도우 생성 → 개체 간 경계를 넘지 않음
-        X_list.append(_make_windows(X, window_size))
-        y_list.append(_make_windows(y, window_size))
-    return np.concatenate(X_list, axis=0), np.concatenate(y_list, axis=0)
+        px, py, pl = _make_forecast_pairs(X, y, input_len, horizon)
+        X_list.append(px)
+        y_list.append(py)
+        last_list.append(pl)
+    return (
+        np.concatenate(X_list, axis=0),
+        np.concatenate(y_list, axis=0),
+        np.concatenate(last_list, axis=0),
+    )
 
 
 def _normalize(X_train, y_train, X_val, y_val, X_test, y_test):
-    """train 기준으로 MinMaxScaler fit 후 전체 분할에 적용. scaler는 파일로 저장."""
-    feat_scaler   = MinMaxScaler()
-    target_scaler = MinMaxScaler()
+    """feature: MinMaxScaler, Δ target: clip 후 sklearn StandardScaler (train fit, 열별)."""
+    y_train = _clip_deltas(y_train)
+    y_val = _clip_deltas(y_val)
+    y_test = _clip_deltas(y_test)
+
+    feat_scaler = MinMaxScaler()
+    delta_scaler = StandardScaler()
 
     def transform_X(X, fit=False):
         n, ws, nf = X.shape
         d = X.reshape(-1, nf)
         return (feat_scaler.fit_transform(d) if fit else feat_scaler.transform(d)).reshape(n, ws, nf)
 
-    def transform_y(y, fit=False):
-        n, ws, nt = y.shape
-        d = y.reshape(-1, nt)
-        return (target_scaler.fit_transform(d) if fit else target_scaler.transform(d)).reshape(n, ws, nt)
+    def scale_y(y: np.ndarray, *, fit: bool) -> np.ndarray:
+        n_targets = y.shape[-1]
+        flat = y.reshape(-1, n_targets)
+        scaled = delta_scaler.fit_transform(flat) if fit else delta_scaler.transform(flat)
+        return scaled.reshape(y.shape).astype(np.float32)
 
     X_train = transform_X(X_train, fit=True)
-    X_val   = transform_X(X_val)
-    X_test  = transform_X(X_test)
+    X_val = transform_X(X_val)
+    X_test = transform_X(X_test)
 
-    y_train = transform_y(y_train, fit=True)
-    y_val   = transform_y(y_val)
-    y_test  = transform_y(y_test)
+    y_train = scale_y(y_train, fit=True)
+    y_val = scale_y(y_val, fit=False)
+    y_test = scale_y(y_test, fit=False)
 
-    joblib.dump(feat_scaler,   FEAT_SCALER_PATH)
-    joblib.dump(target_scaler, TARGET_SCALER_PATH)
+    joblib.dump(feat_scaler, FEAT_SCALER_PATH)
+    joblib.dump(delta_scaler, DELTA_SCALER_PATH)
 
     return X_train, y_train, X_val, y_val, X_test, y_test
 
 
-def _make_loader(X, y, batch_size=32, shuffle=False):
-    """numpy 배열을 PyTorch DataLoader로 변환."""
+def _make_loader(X, y, last_obs, batch_size=32, shuffle=False):
+    """numpy 배열을 PyTorch DataLoader로 변환. last_obs는 절대 좌표 (batch, 3)."""
     tx = torch.tensor(X, dtype=torch.float32)
     ty = torch.tensor(y, dtype=torch.float32)
-    return DataLoader(TensorDataset(tx, ty), batch_size=batch_size, shuffle=shuffle)
+    t_last = torch.tensor(last_obs, dtype=torch.float32)
+    return DataLoader(TensorDataset(tx, ty, t_last), batch_size=batch_size, shuffle=shuffle)
 
 
-def get_data_loader(features: list, window_size: int, batch_size: int = 32):
-    """CSV 로드부터 DataLoader 반환까지의 전처리 파이프라인.
-
-    분할 기준 (개체 단위, 시계열 오염 방지):
-        Train : Art, Jill, Hudson, Bea, Caley, Isabel  (순풍형·광주기형 혼합)
-        Val   : Whit                                    (순풍형 검증)
-        Test  : Bergen                                  (광주기형 → 일반화 검증)
-    """
+def get_data_loader(
+    features: list,
+    window_size: int,
+    forecast_horizon: int,
+    batch_size: int = 32,
+):
+    """CSV 로드부터 DataLoader 반환까지의 forecast 전처리 파이프라인."""
     data = pd.read_csv(DATASET_PATH)
 
-    # 개체별로 윈도우 생성 후 split별로 concat
-    X_train, y_train = _collect_windows(data, BIRDS.get('train'), features, window_size)
-    X_val,   y_val   = _collect_windows(data, BIRDS.get('valid'),   features, window_size)
-    X_test,  y_test  = _collect_windows(data, BIRDS.get('test'),  features, window_size)
+    birds_to_exclude = [
+        '701', '707', '709', '711', '712', '720', '738', '742', '749', '750',
+        '766', '768', 'CS007027_3098', 'Frank_3084', 'Hannah_3988_LK2',
+    ]
+    birds_in_data = sorted([
+        bird for bird in data['bird'].unique() if bird not in birds_to_exclude
+    ])
+    birds_in_data_len = len(birds_in_data)
+    birds = {
+        "train": birds_in_data[:int(birds_in_data_len * 0.7)],
+        "valid": birds_in_data[int(birds_in_data_len * 0.7):int(birds_in_data_len * 0.85)],
+        "test": birds_in_data[int(birds_in_data_len * 0.85):],
+    }
+
+    X_train, y_train, last_train = _collect_forecast_pairs(
+        data, birds.get('train'), features, window_size, forecast_horizon
+    )
+    X_val, y_val, last_val = _collect_forecast_pairs(
+        data, birds.get('valid'), features, window_size, forecast_horizon
+    )
+    X_test, y_test, last_test = _collect_forecast_pairs(
+        data, birds.get('test'), features, window_size, forecast_horizon
+    )
 
     X_train, y_train, X_val, y_val, X_test, y_test = _normalize(
         X_train, y_train, X_val, y_val, X_test, y_test
     )
 
-    train_loader = _make_loader(X_train, y_train, batch_size=batch_size, shuffle=True)
-    val_loader   = _make_loader(X_val,   y_val,   batch_size=batch_size)
-    test_loader  = _make_loader(X_test,  y_test,  batch_size=batch_size)
+    train_loader = _make_loader(X_train, y_train, last_train, batch_size=batch_size, shuffle=True)
+    val_loader = _make_loader(X_val, y_val, last_val, batch_size=batch_size)
+    test_loader = _make_loader(X_test, y_test, last_test, batch_size=batch_size)
 
     return train_loader, val_loader, test_loader
