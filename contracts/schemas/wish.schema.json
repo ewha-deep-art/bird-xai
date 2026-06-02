@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://bird-xai.local/schemas/wish.schema.json",
+  "title": "Bird XAI Wish Request/Response",
+  "description": "Visitor → Server: POST /wish JSON body and success response.",
+  "oneOf": [
+    {
+      "title": "WishRequest",
+      "type": "object",
+      "properties": {
+        "message": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 50,
+          "description": "Visitor message (not stored in v1)."
+        }
+      },
+      "required": ["message"],
+      "additionalProperties": false
+    },
+    {
+      "title": "WishResponse",
+      "type": "object",
+      "properties": {
+        "status": { "type": "string", "const": "ok" },
+        "backend": { "type": "string" },
+        "subject_id": { "type": "string" }
+      },
+      "required": ["status", "backend", "subject_id"],
+      "additionalProperties": false
+    }
+  ]
+}
