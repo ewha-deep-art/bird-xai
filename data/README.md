@@ -1,68 +1,36 @@
 # data/
-
-이 디렉토리는 프로젝트의 원본 데이터와 전처리 결과 데이터를 저장하는 공간입니다. 학습과 추론의 기반이 되는 파일들이 이곳에 모이며, 외부 출처에서 받은 데이터와 내부 파이프라인이 생성한 산출물을 명확히 구분해 관리합니다.
-
-## 데이터 출처
-
-### Movebank
-
-- 용도: 철새 GPS 이동 경로 데이터 수집
-- 제공 정보: 개체 식별자, 시각 정보, 위도/경도, 고도, 속도 등
-- 프로젝트 활용 방식:
-  - 개체별 비행 경로 추출
-  - 실제 비행 날짜 및 구간 분리
-  - 모델 학습용 시계열 입력 생성
-
-### ERA5
-
-- 출처: Copernicus Climate Data Store
-- 용도: GPS 경로에 대응하는 기후 변수 제공
-- 제공 정보:
-  - 풍속 및 풍향 관련 변수
-  - 기온
-  - 기압 레벨 기반 대기 상태
-- 프로젝트 활용 방식:
-  - GPS 위치와 시각에 맞춘 환경 변수 매핑
-  - 모델 학습과 XAI 설명의 주요 feature 제공
+이 디렉토리는 프로젝트의 원본 데이터, 전처리 결과, 데이터 처리 코드를 저장합니다.
 
 ## 디렉토리 구성
 
 ### `raw/`
-
-외부에서 직접 수집하거나 다운로드한 원본 파일을 보관합니다.
-
-- 예시 파일:
-  - Movebank CSV
-  - ERA5 NetCDF
-- 특징:
-  - 사람이 직접 관리하는 입력 데이터
-  - 가능한 한 가공하지 않은 상태를 유지
-  - Git에는 포함하지 않거나 최소화
+외부에서 수집한 원본 데이터를 보관합니다.
+용량 문제로 Git에 포함하지 않으며, Google Drive에서 관리합니다.
+파일 목록 및 접근 링크는 [raw/README.md](raw/README.md)를 참고하세요.
+```
+raw/
+├── movebank/    ← GPS 원본 (Movebank)
+│   └── .gitkeep
+├── era5/        ← ERA5 기후 데이터 (CDS)
+│   └── .gitkeep
+└── README.md
+```
 
 ### `processed/`
+전처리 파이프라인이 생성한 학습용 산출물을 보관합니다.
+전체 파일은 용량 문제로 Git에 포함하지 않으며, 샘플 파일과 컬럼 명세는
+[processed/README.md](processed/README.md)를 참고하세요.
 
-전처리 파이프라인이 생성한 학습 및 추론용 산출물을 보관합니다.
+### `notebooks/`
+데이터 수집 및 전처리에 사용된 코랩 노트북을 보관합니다.
+[notebooks/README.md](notebooks/README.md)를 참고하세요.
 
-- 예시 산출물:
-  - 시간 간격이 정규화된 GPS 시계열
-  - 기후 데이터가 결합된 feature 테이블
-  - 학습용 샘플셋 또는 시퀀스 파일
-- 특징:
-  - `ai/training/preprocessing/`의 결과 저장 위치
-  - 재현 가능한 파일명과 버전 규칙이 중요
+## 데이터셋 현황
 
-## 이 폴더에서 다루는 기술
-
-- 파일 포맷:
-  - `CSV`
-  - `NetCDF`
-  - 필요 시 `Parquet` 또는 `NPY`
-- 데이터 처리에 함께 쓰이는 주요 라이브러리:
-  - `pandas`
-  - `numpy`
-  - `xarray`
+| 데이터셋 | 종 | 개체 수 | 기간 | 상태 |
+|---------|-----|--------|------|------|
+| North Sea White-fronted Geese | Anser albifrons | 65마리 | 2014~2017 9~11월 | 전처리 완료 |
 
 ## 관련 디렉토리
-
-- 학습 phase: [ai/training/README.md](../ai/training/README.md)
+- 학습 코드: [ai/training/README.md](../ai/training/README.md)
 - 프로젝트 개요: [README.md](../README.md)
