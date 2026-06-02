@@ -25,6 +25,8 @@
 
 전처리 산출물. inference·training이 직접 참조.
 
+아래 3파일(+ repo 루트의 `bird_best.pt`)은 **Railway Docker 빌드**를 위해 git에 포함됩니다. 그 외 `processed/` 파일(예: `preprocessed_9birds_full.csv`)은 gitignore.
+
 | 파일 | 용도 |
 |---|---|
 | `preprocessed_geese_full.csv` | 학습·추론 dataset (`ai/common` `DATASET_PATH`) |

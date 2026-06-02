@@ -1,8 +1,12 @@
 # =====================
-# Data (LFS 미사용 - 대용량 파일 제외)
+# Data
 # =====================
 data/raw/
-data/processed/
+# processed: Railway/Docker용 4파일만 git 포함 (나머지는 로컬만)
+data/processed/*
+!data/processed/preprocessed_geese_full.csv
+!data/processed/feat_scaler.pkl
+!data/processed/delta_scaler.pkl
 
 # =====================
 # Python
@@ -18,13 +22,12 @@ dist/
 build/
 .pytest_cache/
 
-# AI 모델 가중치 (대용량)
+# AI 모델 가중치 — bird_best.pt만 git (Railway Docker COPY)
 ai/model/checkpoints/
 ai/model/weights/
-*.pt
-*.pth
+ai/training/model/weights/*
+!ai/training/model/weights/bird_best.pt
 *.ckpt
-*.pkl
 
 # Jupyter
 .ipynb_checkpoints/

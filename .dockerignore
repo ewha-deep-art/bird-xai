@@ -1,0 +1,32 @@
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.git/
+.gitignore
+.env
+*.ipynb
+.ipynb_checkpoints/
+
+# Unity (not needed in API image)
+render/
+
+# Raw data (processed artifacts copied explicitly in Dockerfile)
+data/raw/
+
+# Extra processed files not bundled
+data/processed/preprocessed_9birds_full.csv
+
+# Docs / planning (not runtime)
+docs/
+AGENTS.md
+.cursor/
+*.md
+!README.md
+
+# Extra weights
+ai/training/model/weights/Art_best.pt
+
+# CI / editor
+.github/
