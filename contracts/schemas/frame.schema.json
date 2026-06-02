@@ -18,7 +18,7 @@
     "candidates": {
       "type": "array",
       "items": { "$ref": "https://bird-xai.local/schemas/common.schema.json#/$defs/candidatePath" },
-      "minItems": 1
+      "minItems": 0
     },
     "xai": {
       "$ref": "https://bird-xai.local/schemas/common.schema.json#/$defs/xaiResult"
@@ -36,8 +36,8 @@
       "oneOf": [
         {
           "type": "object",
-          "propertyNames": { "$ref": "https://bird-xai.local/schemas/common.schema.json#/$defs/attributionFeatureKey" },
-          "additionalProperties": { "type": "number" }
+          "propertyNames": { "$ref": "https://bird-xai.local/schemas/common.schema.json#/$defs/overrideKey" },
+          "additionalProperties": { "type": "integer" }
         },
         { "type": "null" }
       ]

@@ -5,7 +5,11 @@
   "$defs": {
     "attributionFeatureKey": {
       "type": "string",
-      "enum": ["wind_speed", "wind_direction"]
+      "enum": ["tailwind", "headwind", "weather_key"]
+    },
+    "overrideKey": {
+      "type": "string",
+      "enum": ["message_cnt"]
     },
     "point": {
       "type": "object",

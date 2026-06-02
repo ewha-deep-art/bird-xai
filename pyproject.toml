@@ -27,6 +27,7 @@ dependencies = [
   "joblib>=1.5.3,<1.6.0",
   "optuna>=4.8.0,<4.9.0",
   "scikit-learn>=1.7.0,<1.9.0",
+  "limits>=3.13,<5",
 ]
 
 [project.optional-dependencies]
