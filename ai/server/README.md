@@ -44,7 +44,7 @@ QR 코드 → `/wind-and-wish` → `POST /wish`. 한국어 미니멀 UI.
 open http://127.0.0.1:8080/wind-and-wish
 ```
 
-정적 파일: [`static/participate.html`](static/participate.html) (목업 → [`docs/visitor_web_demo.png`](../../docs/visitor_web_demo.png))
+정적 파일: [`static/participate.html`](static/participate.html) (목업 스크린샷: [`static/visitor_web_demo.png`](static/visitor_web_demo.png))
 
 ## 메시지 타입 (서버 → Unity)
 
