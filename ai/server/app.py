@@ -29,6 +29,25 @@ def create_app() -> FastAPI:
             "backend": service.pipeline.backend_name,
             "subject_id": service.session.subject_id,
         }
+
+    @app.post("/wish")
+    async def wish(message: str) -> dict:
+        if service.startup_error is not None or service.pipeline is None:
+            return {
+                "status": "error",
+                "detail": service.startup_error,
+            }
+        if message:
+            await service.update_overrides()
+            return {
+                "status": "ok",
+                "backend": service.pipeline.backend_name,
+                "subject_id": service.session.subject_id,
+            }
+        return {
+            "status": "error",
+            "detail": "message is empty or not a string",
+        }
     
     @app.websocket("/ws")
     async def websocket_endpoint(websocket: WebSocket) -> None:
@@ -47,13 +66,7 @@ def create_app() -> FastAPI:
         send_task = asyncio.create_task(send_loop())
         try:
             while True:
-                payload = await websocket.receive_json()
-                try:
-                    await service.update_overrides(payload)
-                except Exception as exc:
-                    await websocket.send_text(
-                        ErrorMessage(code="bad_request", detail=str(exc)).model_dump_json()
-                    )
+                await websocket.receive_json() # 클라이언트로부터의 메시지는 현재 사용하지 않지만, 연결 유지를 위해 수신 대기
         except WebSocketDisconnect:
             pass
         finally:
