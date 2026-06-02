@@ -16,12 +16,22 @@
 ## 디렉토리 구성
 
 ### `raw/`
-
-외부에서 받은 원본 파일 (Movebank CSV, ERA5 NetCDF). Git에는 최소화.
-
-현재 repo에는 `.gitkeep`만 있을 수 있음. 실제 raw 파일은 로컬 또는 별도 저장소에서 관리.
+외부에서 수집한 원본 데이터를 보관합니다.
+용량 문제로 Git에 포함하지 않으며, Google Drive에서 관리합니다.
+파일 목록 및 접근 링크는 [raw/README.md](raw/README.md)를 참고하세요.
+```
+raw/
+├── movebank/    ← GPS 원본 (Movebank)
+│   └── .gitkeep
+├── era5/        ← ERA5 기후 데이터 (CDS)
+│   └── .gitkeep
+└── README.md
+```
 
 ### `processed/`
+전처리 파이프라인이 생성한 학습용 산출물을 보관합니다.
+전체 파일은 용량 문제로 Git에 포함하지 않으며, 샘플 파일과 컬럼 명세는
+[processed/README.md](processed/README.md)를 참고하세요.
 
 전처리 산출물. inference·training이 직접 참조.
 
@@ -31,7 +41,11 @@
 | `feat_scaler.pkl` | 입력 feature `MinMaxScaler` (train fit) |
 | `delta_scaler.pkl` | Δ target `sklearn.preprocessing.StandardScaler` (clip 후 train fit, 열별) |
 
-## 코드 (`loader.py`)
+### `notebooks/`
+데이터 수집 및 전처리에 사용된 코랩 노트북을 보관합니다.
+[notebooks/README.md](notebooks/README.md)를 참고하세요.
+
+### `loader.py`
 
 | 단계 | 설명 |
 |---|---|
@@ -41,9 +55,12 @@
 | scaler | feature MinMax, Δ StandardScaler; train split만 fit 후 pkl 저장 |
 | 출력 | `(X, y_delta, last_obs)` 텐서 — `train_loader` / `val_loader` / `test_loader` |
 
-`import ai.common` 시 `get_data_loader()`가 한 번 실행되며, 위 scaler pkl이 **train 데이터 기준으로 다시 fit·저장**됩니다. CSV만 바꿨을 때 pkl을 맞추려면 프로세스를 새로 띄우면 됩니다.
+## 데이터셋 현황
 
-## 관련
+| 데이터셋 | 종 | 개체 수 | 기간 | 상태 |
+|---------|-----|--------|------|------|
+| North Sea White-fronted Geese | Anser albifrons | 65마리 | 2014~2017 9~11월 | 전처리 완료 |
 
-- [ai/training/README.md](../ai/training/README.md)
-- [README.md](../README.md)
+## 관련 디렉토리
+- 학습 코드: [ai/training/README.md](../ai/training/README.md)
+- 프로젝트 개요: [README.md](../README.md)
