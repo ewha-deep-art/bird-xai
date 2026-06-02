@@ -2,11 +2,21 @@
 # Data (LFS 미사용 - 대용량 파일 제외)
 # =====================
 
-# data/raw/era5 폴더 안의 모든 파일과 하위 폴더들을 무시하되,
+# data/raw/era5 폴더
 data/raw/era5/**/*
-
-# .gitkeep 파일만큼은 예외로 두고 Git에 올린다!
 !data/raw/era5/.gitkeep
+
+# data/raw/era5 폴더
+data/raw/era5/**/*
+!data/raw/era5/.gitkeep
+data/raw/movebank/**/*
+!data/raw/movebank/.gitkeep
+
+# data/processed 대용량 파일
+data/processed/*.csv
+data/processed/*.nc
+# 단, 샘플 파일은 예외
+!data/processed/*_sample.csv
 
 # =====================
 # Python
@@ -33,6 +43,9 @@ ai/model/weights/
 # Jupyter
 .ipynb_checkpoints/
 *.ipynb
+
+# data/notebooks 안의 노트북은 예외
+!data/notebooks/*.ipynb
 
 # =====================
 # Unity
