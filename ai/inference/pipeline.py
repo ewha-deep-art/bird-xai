@@ -1,11 +1,14 @@
-from typing import get_args
+import numpy as np
 import torch
 import joblib
 from collections import deque
 from itertools import cycle
 from captum.attr import IntegratedGradients
 
-from ai.common import DEVICE, FEATURES, TARGET_FEATURES, TARGET_SCALER_PATH, test_loader
+from ai.common import (
+    DEVICE, FEATURES, TARGET_FEATURES, FORECAST_HORIZON,
+    FEAT_SCALER_PATH, DELTA_SCALER_PATH, test_loader, delta_to_absolute,
+)
 from ai.common.models import (
     FrameMessage,
     Point,
@@ -15,74 +18,116 @@ from ai.common.models import (
 )
 from ai.training.model import load_model_with_state
 
-QUEUE_REFILL_THRESHOLD = 32
+QUEUE_REFILL_THRESHOLD = 14
+XAI_SOURCE_FEATURES = ("ws_850", "t_850", "q_850", "lapse_rate")
+XAI_WEATHER_SOURCE = "lapse_rate"
 
 
 class BirdPipeline:
     backend_name = "bird"
 
     def __init__(self):
-        self._loader_iter = cycle(test_loader)  # NOTE: test_loader가 크다면 메모리 부담 있음
+        self._loader_iter = cycle(test_loader)
         self._queue: deque[tuple[Point, XaiResult]] = deque()
         self._pending_queue: deque[tuple[Point, XaiResult]] | None = None
         self._last_overrides: dict[OverrideKey, int] | None = None
         self.model = load_model_with_state()
-        self.target_scaler = joblib.load(TARGET_SCALER_PATH)
+        self.feat_scaler = joblib.load(FEAT_SCALER_PATH)
+        self.delta_scaler = joblib.load(DELTA_SCALER_PATH)
         self.ig = IntegratedGradients(self.model)
 
-    def predict(self, X) -> list[Point]:
+    def _last_obs_point(self, last_obs: np.ndarray) -> Point:
+        return Point(lat=float(last_obs[0]), lon=float(last_obs[1]), altitude_m=float(last_obs[2]))
+
+    def predict(self, X, last_obs: np.ndarray) -> list[Point]:
         with torch.no_grad():
             pred = self.model(X.to(DEVICE)).cpu().numpy()
-        pred = pred.reshape(-1, len(TARGET_FEATURES))
-        pred = self.target_scaler.inverse_transform(pred)
-        return [Point(lat=row[0], lon=row[1], altitude_m=row[2]) for row in pred]
+        pred = pred.reshape(FORECAST_HORIZON, len(TARGET_FEATURES))
+        deltas = self.delta_scaler.inverse_transform(pred)
+        abs_pos = delta_to_absolute(last_obs, deltas)
+        return [
+            Point(lat=float(row[0]), lon=float(row[1]), altitude_m=float(row[2]))
+            for row in abs_pos
+        ]
+
+    def _unity_attributions(self, row: np.ndarray, X) -> dict[AttributionFeatureKey, float]:
+        abs_row = np.abs(row)
+        total = float(abs_row.sum()) or 1.0
+        source = {
+            feature: float(abs_row[FEATURES.index(feature)] / total)
+            for feature in XAI_SOURCE_FEATURES
+        }
+
+        X_inv = self.feat_scaler.inverse_transform(
+            X.detach().cpu().numpy().reshape(-1, X.shape[-1])
+        )
+        ws_850_val = float(X_inv[-1, FEATURES.index("ws_850")])
+        ws_attr = source["ws_850"]
+        if ws_850_val >= 0:
+            tailwind, headwind = ws_attr, 0.0
+        else:
+            tailwind, headwind = 0.0, ws_attr
+
+        return {
+            "tailwind": tailwind,
+            "headwind": headwind,
+            "weather_key": source[XAI_WEATHER_SOURCE],
+        }
 
     def apply_xai(self, X) -> list[XaiResult]:
         X = X.to(DEVICE).requires_grad_(True)
+        results = []
 
-        # timestep × target 조합별로 attribution 계산 후 합산
-        total_attrs = None
-        n_timesteps = X.shape[1]  # 24
-        for t in range(n_timesteps):
-            for target_idx in range(len(TARGET_FEATURES)):  # 3
+        for k in range(FORECAST_HORIZON):
+            total_attrs = None
+            for target_idx in range(len(TARGET_FEATURES)):
                 attrs = self.ig.attribute(
                     X,
-                    target=(t, target_idx),
-                    n_steps=10, # 지연 줄이기 위해 10으로 설정
+                    target=(k, target_idx),
+                    n_steps=10,
                     return_convergence_delta=False,
                 )
                 total_attrs = attrs if total_attrs is None else total_attrs + attrs
 
-        # (batch=32, timestep=24, n_input_features)
-        attrs_np = total_attrs.detach().cpu().numpy()
-        attrs_np = attrs_np.reshape(-1, attrs_np.shape[-1])  # (batch*timestep, n_input_features)
-
-        results = []
-        for row in attrs_np:
-            total = abs(row).sum() or 1.0
-            normalized = {
-                feature: float(abs(row[FEATURES.index(feature)]) / total)
-                for feature in get_args(AttributionFeatureKey)
-            }
-            results.append(XaiResult(attributions=normalized))
+            row = total_attrs[0].detach().cpu().numpy().mean(axis=0)
+            results.append(XaiResult(attributions=self._unity_attributions(row, X)))
         return results
-    
-    def _apply_overrides_to_input(self, X, overrides: dict[OverrideKey, int]) -> ...:
-        # TODO: overrides 값으로 X의 wind_speed, wind_direction 피처 수정
-        return X
+
+    def _apply_overrides_to_input(self, X, overrides: dict[OverrideKey, int]) -> torch.Tensor:
+        def normalize_value(x):
+            x_min, x_max = 10, 100
+            if x > x_max:
+                x = x_max
+            elif x < x_min:
+                x = x_min
+            new_min, new_max = 0, 34
+            return (x - x_min) * (new_max - new_min) / (x_max - x_min) + new_min
+
+        ws_850 = normalize_value(overrides.get('message_cnt', 0))
+        X_inversed = self.feat_scaler.inverse_transform(X.cpu().numpy().reshape(-1, X.shape[-1]))
+        X_inversed[:, FEATURES.index('ws_850')] = ws_850
+        X_new = self.feat_scaler.transform(X_inversed).reshape(X.shape)
+        return torch.tensor(X_new, dtype=X.dtype, device=X.device)
 
     def _build_queue(self, overrides: dict[OverrideKey, int] | None) -> deque[tuple[Point, XaiResult]]:
-        X, _ = next(self._loader_iter)
+        X, _, last_obs_batch = next(self._loader_iter)
+        X = X[0:1]
+        last_obs = last_obs_batch[0].numpy()
+
         if overrides:
             X = self._apply_overrides_to_input(X, overrides)
-        points = self.predict(X)
+
+        future_points = self.predict(X, last_obs)
         xai_results = self.apply_xai(X)
-        return deque(zip(points, xai_results))
+        last_obs_point = self._last_obs_point(last_obs)
+
+        queue_items: list[tuple[Point, XaiResult]] = [(last_obs_point, xai_results[0])]
+        for k, point in enumerate(future_points):
+            queue_items.append((point, xai_results[k]))
+        return deque(queue_items)
 
     def build_frame_from_queue(self) -> tuple[FrameMessage, bool]:
-        """큐에서 바로 꺼내기만 함. 블로킹 없음."""
         swapped = False
-        # pending이 완료됐으면 교체
         if self._pending_queue is not None:
             self._queue = self._pending_queue
             self._pending_queue = None
@@ -98,12 +143,10 @@ class BirdPipeline:
         ), swapped
 
     def set_pending_queue(self, queue: deque, overrides: dict[OverrideKey, int] | None) -> None:
-        """백그라운드 빌드 완료 후 호출."""
         self._pending_queue = queue
         self._last_overrides = overrides
 
     def build_queue_blocking(self, overrides: dict[OverrideKey, int] | None) -> deque:
-        """executor에서만 호출. 블로킹 OK."""
         return self._build_queue(overrides)
 
     def needs_prefill(self) -> bool:

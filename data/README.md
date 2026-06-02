@@ -1,68 +1,45 @@
 # data/
 
-이 디렉토리는 프로젝트의 원본 데이터와 전처리 결과 데이터를 저장하는 공간입니다. 학습과 추론의 기반이 되는 파일들이 이곳에 모이며, 외부 출처에서 받은 데이터와 내부 파이프라인이 생성한 산출물을 명확히 구분해 관리합니다.
+원본 데이터와 전처리 결과를 저장합니다. 학습·추론은 `data/loader.py`와 `data/processed/` 산출물을 사용합니다.
 
 ## 데이터 출처
 
 ### Movebank
 
-- 용도: 철새 GPS 이동 경로 데이터 수집
-- 제공 정보: 개체 식별자, 시각 정보, 위도/경도, 고도, 속도 등
-- 프로젝트 활용 방식:
-  - 개체별 비행 경로 추출
-  - 실제 비행 날짜 및 구간 분리
-  - 모델 학습용 시계열 입력 생성
+- 철새 GPS 이동 경로 (개체 ID, 시각, 위·경도, 고도, 속도 등)
 
 ### ERA5
 
-- 출처: Copernicus Climate Data Store
-- 용도: GPS 경로에 대응하는 기후 변수 제공
-- 제공 정보:
-  - 풍속 및 풍향 관련 변수
-  - 기온
-  - 기압 레벨 기반 대기 상태
-- 프로젝트 활용 방식:
-  - GPS 위치와 시각에 맞춘 환경 변수 매핑
-  - 모델 학습과 XAI 설명의 주요 feature 제공
+- Copernicus Climate Data Store 기후 변수 (풍속·풍향, 기온, 기압 레벨 등)
+- GPS 시각·위치에 맞춘 feature 매핑
 
 ## 디렉토리 구성
 
 ### `raw/`
 
-외부에서 직접 수집하거나 다운로드한 원본 파일을 보관합니다.
+외부에서 받은 원본 파일 (Movebank CSV, ERA5 NetCDF). Git에는 최소화.
 
-- 예시 파일:
-  - Movebank CSV
-  - ERA5 NetCDF
-- 특징:
-  - 사람이 직접 관리하는 입력 데이터
-  - 가능한 한 가공하지 않은 상태를 유지
-  - Git에는 포함하지 않거나 최소화
+현재 repo에는 `.gitkeep`만 있을 수 있음. 실제 raw 파일은 로컬 또는 별도 저장소에서 관리.
 
 ### `processed/`
 
-전처리 파이프라인이 생성한 학습 및 추론용 산출물을 보관합니다.
+전처리 산출물. inference·training이 직접 참조.
 
-- 예시 산출물:
-  - 시간 간격이 정규화된 GPS 시계열
-  - 기후 데이터가 결합된 feature 테이블
-  - 학습용 샘플셋 또는 시퀀스 파일
-- 특징:
-  - `ai/training/preprocessing/`의 결과 저장 위치
-  - 재현 가능한 파일명과 버전 규칙이 중요
+| 파일 | 용도 |
+|---|---|
+| `preprocessed_geese_full.csv` | 학습·추론 dataset (`ai/common` `DATASET_PATH`) |
+| `feat_scaler.pkl`, `delta_scaler.pkl` | MinMax scaler (loader·pipeline) |
 
-## 이 폴더에서 다루는 기술
+## 코드
 
-- 파일 포맷:
-  - `CSV`
-  - `NetCDF`
-  - 필요 시 `Parquet` 또는 `NPY`
-- 데이터 처리에 함께 쓰이는 주요 라이브러리:
-  - `pandas`
-  - `numpy`
-  - `xarray`
+- `loader.py` — 슬라이딩 윈도우, scaler fit/transform, `train_loader` / `val_loader` / `test_loader`
+
+## 전처리 CLI (예정)
+
+`bird-xai-preprocess` entry point는 [pyproject.toml](../pyproject.toml)에 등록되어 있으나 `data/preprocess.py`는 아직 없음.  
+팀 노트북 파이프라인을 Python으로 포팅 예정 ([docs/unimplemented.md](../docs/unimplemented.md) B항).
 
 ## 관련 디렉토리
 
-- 학습 phase: [ai/training/README.md](../ai/training/README.md)
-- 프로젝트 개요: [README.md](../README.md)
+- [ai/training/README.md](../ai/training/README.md)
+- [README.md](../README.md)
