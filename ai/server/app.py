@@ -4,11 +4,17 @@ from __future__ import annotations
 
 import asyncio
 from contextlib import suppress
+from pathlib import Path
 
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi import Depends, FastAPI, HTTPException, Request, WebSocket, WebSocketDisconnect
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import FileResponse, JSONResponse
 
 from ai.config import get_settings
-from ai.common.models import ErrorMessage
+from ai.common.models import ErrorMessage, WishRequest, WishResponse
+from ai.server.rate_limit import RateLimiter
+
+VISITOR_HTML = Path(__file__).parent / "static" / "participate.html"
 
 
 def create_app() -> FastAPI:
@@ -16,6 +22,15 @@ def create_app() -> FastAPI:
     settings = get_settings()
     from ai.server.service import ServerService
     service = ServerService()
+    rate_limiter = RateLimiter(interval_sec=settings.wish_rate_limit_sec)
+
+    @app.exception_handler(RequestValidationError)
+    async def validation_to_bad_request(_request: Request, exc: RequestValidationError) -> JSONResponse:
+        return JSONResponse(status_code=400, content={"detail": exc.errors()})
+
+    @app.get("/wind-and-wish", include_in_schema=False)
+    async def wind_and_wish_page() -> FileResponse:
+        return FileResponse(VISITOR_HTML, media_type="text/html; charset=utf-8")
 
     @app.get("/health")
     async def health() -> dict:
@@ -27,28 +42,21 @@ def create_app() -> FastAPI:
         return {
             "status": "ok",
             "backend": service.pipeline.backend_name,
-            "subject_id": service.session.subject_id,
+            "subject_id": service.subject_id,
         }
 
-    @app.post("/wish")
-    async def wish(message: str) -> dict:
+    @app.post("/wish", dependencies=[Depends(rate_limiter)])
+    async def wish(_body: WishRequest) -> WishResponse:
         if service.startup_error is not None or service.pipeline is None:
-            return {
-                "status": "error",
-                "detail": service.startup_error,
-            }
-        if message:
-            await service.update_overrides()
-            return {
-                "status": "ok",
-                "backend": service.pipeline.backend_name,
-                "subject_id": service.session.subject_id,
-            }
-        return {
-            "status": "error",
-            "detail": "message is empty or not a string",
-        }
-    
+            raise HTTPException(status_code=503, detail=service.startup_error)
+
+        service.update_overrides()
+        return WishResponse(
+            status="ok",
+            backend=service.pipeline.backend_name,
+            subject_id=service.subject_id,
+        )
+
     @app.websocket("/ws")
     async def websocket_endpoint(websocket: WebSocket) -> None:
         await websocket.accept()
@@ -66,7 +74,7 @@ def create_app() -> FastAPI:
         send_task = asyncio.create_task(send_loop())
         try:
             while True:
-                await websocket.receive_json() # 클라이언트로부터의 메시지는 현재 사용하지 않지만, 연결 유지를 위해 수신 대기
+                await websocket.receive_json()
         except WebSocketDisconnect:
             pass
         finally:
@@ -75,6 +83,7 @@ def create_app() -> FastAPI:
                 await send_task
 
     return app
+
 
 def main() -> None:
     settings = get_settings()

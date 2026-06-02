@@ -1,0 +1,17 @@
+{
+  "_comment": "POST /wish — JSON body { message } (1–50 chars). Accumulates message_cnt → ws_850 override at flush threshold.",
+  "method": "POST",
+  "path": "/wish",
+  "request_body": {
+    "message": "바람"
+  },
+  "response_ok": {
+    "status": "ok",
+    "backend": "bird",
+    "subject_id": "White-fronted Goose"
+  },
+  "errors": {
+    "400": "empty or invalid message",
+    "429": "more than one request per IP within 5 seconds"
+  }
+}

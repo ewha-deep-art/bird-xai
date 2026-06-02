@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>바람</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100dvh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding:
+        max(2rem, env(safe-area-inset-top, 0px))
+        clamp(2rem, 9vw, 3rem)
+        max(2rem, env(safe-area-inset-bottom, 0px));
+      background: #0a0c0e;
+      color: #e8eaec;
+      font-family: "Pretendard", "Noto Sans KR", system-ui, sans-serif;
+      -webkit-font-smoothing: antialiased;
+      position: relative;
+      overflow-x: hidden;
+    }
+
+    /* idea.png 다크모드 — teal 흐름 + 은은한 gold */
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      background:
+        radial-gradient(ellipse 70% 45% at 15% 5%, rgba(56, 112, 112, 0.18), transparent 52%),
+        radial-gradient(ellipse 55% 40% at 88% 92%, rgba(160, 130, 88, 0.07), transparent 48%);
+      pointer-events: none;
+    }
+
+    main {
+      width: 100%;
+      max-width: min(16.5rem, 100%);
+      position: relative;
+      z-index: 1;
+    }
+
+    .horizon {
+      width: 2.5rem;
+      height: 1px;
+      margin: 0 auto 2rem;
+      background: linear-gradient(
+        90deg,
+        transparent,
+        rgba(90, 160, 160, 0.4) 45%,
+        rgba(180, 150, 100, 0.25) 55%,
+        transparent
+      );
+    }
+
+    h1 {
+      margin: 0 0 2.25rem;
+      font-size: clamp(1.35rem, 4.5vw, 1.5rem);
+      font-weight: 300;
+      line-height: 1.65;
+      text-align: center;
+      letter-spacing: 0.02em;
+      color: rgba(232, 234, 236, 0.9);
+    }
+
+    h1 em {
+      font-style: normal;
+      font-weight: 400;
+      color: #fff;
+    }
+
+    .form {
+      display: block;
+    }
+
+    /* 편지지 — 어두운 전시 공간과 같은 톤의 얇은 한 장 */
+    .letter {
+      --paper: rgba(14, 18, 20, 0.52);
+      --ink: rgba(232, 234, 236, 0.9);
+      --ink-muted: rgba(170, 182, 180, 0.62);
+      --ink-faint: rgba(130, 145, 142, 0.42);
+      --rule: rgba(90, 160, 160, 0.11);
+      --seal: rgba(130, 185, 185, 0.88);
+
+      border: 1px solid rgba(90, 160, 160, 0.16);
+      border-radius: 2px;
+      background:
+        linear-gradient(180deg, rgba(90, 160, 160, 0.07) 0%, transparent 38%),
+        linear-gradient(160deg, rgba(160, 130, 88, 0.05) 0%, transparent 42%),
+        var(--paper);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      color: var(--ink);
+      box-shadow:
+        0 1px 0 rgba(255, 255, 255, 0.04) inset,
+        0 10px 28px rgba(0, 0, 0, 0.22);
+      overflow: hidden;
+      transition: border-color 0.25s, box-shadow 0.25s;
+    }
+
+    .letter:focus-within {
+      border-color: rgba(90, 160, 160, 0.28);
+      box-shadow:
+        0 1px 0 rgba(255, 255, 255, 0.05) inset,
+        0 10px 32px rgba(0, 0, 0, 0.28),
+        0 0 0 1px rgba(90, 160, 160, 0.12);
+    }
+
+    .zone {
+      padding-left: 1.15rem;
+      padding-right: 1.15rem;
+    }
+
+    .zone + .zone {
+      border-top: 1px solid var(--rule);
+    }
+
+    /* 1. 본문 — 입력이 주 영역 */
+    .zone--write {
+      padding-top: 1.1rem;
+      padding-bottom: 0.85rem;
+      min-height: 9.5rem;
+    }
+
+    textarea {
+      width: 100%;
+      min-height: 6.75rem;
+      padding: 0;
+      border: none;
+      background: transparent;
+      color: var(--ink);
+      font: inherit;
+      font-size: 0.95rem;
+      line-height: 1.6;
+      resize: none;
+      outline: none;
+      display: block;
+    }
+
+    textarea::placeholder {
+      color: var(--ink-faint);
+      font-weight: 300;
+    }
+
+    .counter {
+      display: block;
+      margin-top: 0.5rem;
+      text-align: right;
+      font-size: 0.62rem;
+      font-weight: 400;
+      letter-spacing: 0.06em;
+      font-variant-numeric: tabular-nums;
+      color: var(--ink-faint);
+    }
+
+    /* 2. 보내기 — 보조 영역 */
+    .zone--send {
+      padding-top: 0.45rem;
+      padding-bottom: 0.65rem;
+      text-align: center;
+    }
+
+    button[type="submit"] {
+      display: inline-block;
+      min-height: auto;
+      padding: 0.42rem 1.1rem;
+      border: 1px solid rgba(90, 160, 160, 0.2);
+      border-radius: 999px;
+      background: transparent;
+      color: rgba(190, 210, 208, 0.82);
+      font: inherit;
+      font-size: 0.74rem;
+      font-weight: 400;
+      letter-spacing: 0.08em;
+      cursor: pointer;
+      transition: border-color 0.2s, color 0.2s, opacity 0.2s;
+    }
+
+    button[type="submit"]:hover:not(:disabled) {
+      border-color: rgba(90, 160, 160, 0.38);
+      color: rgba(210, 228, 226, 0.95);
+    }
+
+    button[type="submit"]:active:not(:disabled) {
+      border-color: rgba(90, 160, 160, 0.45);
+      color: #fff;
+    }
+
+    button[type="submit"]:disabled {
+      opacity: 0.35;
+      cursor: not-allowed;
+    }
+
+    /* 3. 편지 하단 메모 */
+    .zone--status {
+      padding: 0;
+      max-height: 0;
+      overflow: hidden;
+      background: rgba(90, 160, 160, 0.05);
+      border-top-color: transparent;
+      transition: max-height 0.25s ease, padding 0.25s ease;
+    }
+
+    .zone--status:has(.feedback:not(:empty)) {
+      padding: 0.55rem 1.15rem 0.65rem;
+      max-height: 4.5rem;
+      border-top-color: var(--rule);
+    }
+
+    .feedback {
+      margin: 0;
+      text-align: center;
+      font-size: 0.72rem;
+      font-weight: 400;
+      line-height: 1.5;
+      letter-spacing: 0.02em;
+      color: var(--ink-muted);
+      word-break: keep-all;
+      overflow-wrap: normal;
+      white-space: pre-line;
+      text-wrap: balance;
+    }
+
+    .feedback.success { color: var(--seal); }
+    .feedback.error { color: rgba(200, 150, 140, 0.85); }
+  </style>
+</head>
+<body>
+  <main>
+    <div class="horizon" aria-hidden="true"></div>
+    <h1>
+      지금 이 순간<br>
+      <em>당신의 바람을</em><br>
+      철새에게 전하세요
+    </h1>
+
+    <form class="form" id="wish-form">
+      <div class="letter">
+        <div class="zone zone--write">
+          <textarea
+            id="message"
+            name="message"
+            maxlength="50"
+            placeholder="바람을 적어주세요"
+            autocomplete="off"
+          ></textarea>
+          <span class="counter" id="counter" aria-live="polite">0 / 50</span>
+        </div>
+        <div class="zone zone--send">
+          <button type="submit" id="submit-btn" disabled>바람 보내기</button>
+        </div>
+        <div class="zone zone--status">
+          <p class="feedback" id="feedback" role="status" aria-live="polite"></p>
+        </div>
+      </div>
+    </form>
+  </main>
+
+  <script>
+    const MAX_LEN = 50;
+    const COOLDOWN_MS = 5000;
+
+    const form = document.getElementById("wish-form");
+    const messageEl = document.getElementById("message");
+    const counterEl = document.getElementById("counter");
+    const submitBtn = document.getElementById("submit-btn");
+    const feedbackEl = document.getElementById("feedback");
+
+    let cooldownUntil = 0;
+
+    const MESSAGES = {
+      success: "바람이 전해졌어요.\n전시 화면을 바라봐 주세요",
+      rateLimit: "바람이 아직 머물러 있어요.\n잠시 뒤 다시 불어주세요",
+      validation: "짧은 한마디면\n충분해요",
+      unavailable: "아직 철새가 준비 중이에요.\n잠시 후 다시 시도해주세요",
+      network: "연결이 끊겼어요.\n다시 시도해주세요",
+      sending: "보내는 중…",
+    };
+
+    function hasMessage() {
+      return messageEl.value.trim().length > 0;
+    }
+
+    function canSubmit() {
+      return hasMessage() && Date.now() >= cooldownUntil;
+    }
+
+    function updateSubmitState() {
+      submitBtn.disabled = !canSubmit();
+    }
+
+    function startCooldown(ms) {
+      cooldownUntil = Date.now() + ms;
+      updateSubmitState();
+      window.setTimeout(updateSubmitState, ms);
+    }
+
+    function updateCounter() {
+      const len = messageEl.value.length;
+      counterEl.textContent = `${len} / ${MAX_LEN}`;
+    }
+
+    function setFeedback(text, kind) {
+      feedbackEl.textContent = text;
+      feedbackEl.className = "feedback" + (kind ? ` ${kind}` : "");
+    }
+
+    function clearFeedback() {
+      setFeedback("", "");
+    }
+
+    messageEl.addEventListener("input", () => {
+      updateCounter();
+      if (feedbackEl.textContent) {
+        clearFeedback();
+      }
+      updateSubmitState();
+    });
+
+    updateCounter();
+    updateSubmitState();
+
+    form.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      if (!canSubmit()) {
+        return;
+      }
+
+      const message = messageEl.value.trim();
+      if (message.length > MAX_LEN) {
+        setFeedback(MESSAGES.validation, "error");
+        return;
+      }
+
+      setFeedback(MESSAGES.sending, "");
+      submitBtn.disabled = true;
+
+      try {
+        const response = await fetch("/wish", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ message }),
+        });
+
+        if (response.ok) {
+          messageEl.value = "";
+          updateCounter();
+          setFeedback(MESSAGES.success, "success");
+          startCooldown(COOLDOWN_MS);
+          return;
+        }
+
+        if (response.status === 429) {
+          setFeedback(MESSAGES.rateLimit, "error");
+        } else if (response.status === 400) {
+          setFeedback(MESSAGES.validation, "error");
+        } else if (response.status === 503) {
+          setFeedback(MESSAGES.unavailable, "error");
+        } else {
+          setFeedback(MESSAGES.network, "error");
+        }
+      } catch {
+        setFeedback(MESSAGES.network, "error");
+      }
+
+      updateSubmitState();
+    });
+  </script>
+</body>
+</html>
