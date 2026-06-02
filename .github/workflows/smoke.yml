@@ -1,0 +1,113 @@
+name: Smoke test
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      save_artifacts_cache:
+        description: Save runtime artifacts to GHA cache (self-hosted runner with files present)
+        type: boolean
+        default: false
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Restore runtime artifacts cache
+        id: artifacts-cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ai/training/model/weights/bird_best.pt
+            data/processed/preprocessed_geese_full.csv
+            data/processed/feat_scaler.pkl
+            data/processed/delta_scaler.pkl
+          key: bird-xai-artifacts-v1
+          restore-keys: |
+            bird-xai-artifacts-
+
+      - name: Verify runtime artifacts
+        id: verify-artifacts
+        run: |
+          missing=0
+          for f in \
+            ai/training/model/weights/bird_best.pt \
+            data/processed/preprocessed_geese_full.csv \
+            data/processed/feat_scaler.pkl \
+            data/processed/delta_scaler.pkl
+          do
+            if [ ! -f "$f" ]; then
+              echo "::warning::Missing artifact: $f"
+              missing=1
+            fi
+          done
+          if [ "$missing" -eq 1 ]; then
+            echo "artifacts_present=false" >> "$GITHUB_OUTPUT"
+            echo "::error::Runtime artifacts not found. Seed GHA cache — see docs/deploy.md (CI artifacts)."
+            exit 1
+          fi
+          echo "artifacts_present=true" >> "$GITHUB_OUTPUT"
+
+      - name: Save runtime artifacts cache
+        if: github.event_name == 'workflow_dispatch' && inputs.save_artifacts_cache == true
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            ai/training/model/weights/bird_best.pt
+            data/processed/preprocessed_geese_full.csv
+            data/processed/feat_scaler.pkl
+            data/processed/delta_scaler.pkl
+          key: bird-xai-artifacts-v1
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Setup Python
+        run: uv python install 3.12
+
+      - name: Install dependencies
+        run: uv sync --frozen --extra dev
+
+      - name: Start server
+        env:
+          BIRD_XAI_WISH_RATE_LIMIT_SEC: "0"
+          BIRD_XAI_PORT: "8080"
+        run: |
+          uv run bird-xai-server &
+          echo $! > server.pid
+
+      - name: Wait for /health
+        run: |
+          for i in $(seq 1 60); do
+            if curl -sf http://127.0.0.1:8080/health | grep -q '"status":"ok"'; then
+              echo "Server ready"
+              exit 0
+            fi
+            sleep 5
+          done
+          echo "::error::Server did not become healthy in time"
+          exit 1
+
+      - name: Run smoke test
+        run: |
+          uv run bird-xai-ws-smoke \
+            --base-url http://127.0.0.1:8080 \
+            --wish-interval 0 \
+            --frames 3 \
+            --timeout 900
+
+      - name: Stop server
+        if: always()
+        run: |
+          if [ -f server.pid ]; then
+            kill "$(cat server.pid)" || true
+          fi

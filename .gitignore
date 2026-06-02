@@ -1,21 +1,16 @@
 # =====================
-# Data (LFS 미사용 - 대용량 파일 제외)
+# Data
 # =====================
-
-# data/raw/era5 폴더
-data/raw/era5/**/*
-!data/raw/era5/.gitkeep
-
-# data/raw/era5 폴더
 data/raw/era5/**/*
 !data/raw/era5/.gitkeep
 data/raw/movebank/**/*
 !data/raw/movebank/.gitkeep
 
-# data/processed 대용량 파일
-data/processed/*.csv
-data/processed/*.nc
-# 단, 샘플 파일은 예외
+# processed: Railway/Docker용 4파일 + 기존 샘플 CSV
+data/processed/*
+!data/processed/preprocessed_geese_full.csv
+!data/processed/feat_scaler.pkl
+!data/processed/delta_scaler.pkl
 !data/processed/*_sample.csv
 
 # =====================
@@ -32,13 +27,12 @@ dist/
 build/
 .pytest_cache/
 
-# AI 모델 가중치 (대용량)
+# AI 모델 가중치 — bird_best.pt만 git (Railway Docker COPY)
 ai/model/checkpoints/
 ai/model/weights/
-*.pt
-*.pth
+ai/training/model/weights/*
+!ai/training/model/weights/bird_best.pt
 *.ckpt
-*.pkl
 
 # Jupyter
 .ipynb_checkpoints/
