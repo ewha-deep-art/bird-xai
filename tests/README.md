@@ -1,44 +1,69 @@
 # tests/
 
-이 디렉토리는 Bird XAI 서버에 대한 간단한 smoke test 및 WebSocket 통신 검증을 담당합니다.
-
-현재 구현은 터미널 기반 WebSocket 클라이언트를 통해 서버와 실제 연결을 수행하고, frame 스트리밍 및 control override 반영 여부를 검증하는 구조입니다.
-
----
+Bird XAI 서버 WebSocket frame 스트리밍 + `/wish` override smoke test입니다.
 
 ## 주요 역할
 
-- WebSocket 연결 검증
-- bootstrap frame 수신 확인
-- schema validation 검증
-- controls.set roundtrip 테스트
-- override 적용 여부 확인
-- frame stream 정상 동작 확인
-
----
+- WebSocket 연결 및 bootstrap frame 검증
+- Pydantic schema validation
+- `GET /wind-and-wish` HTML 페이지 검증
+- `POST /wish` flush → `applied_overrides.message_cnt` 확인
+- (선택) 400/429 negative checks
 
 ## 내부 구성
 
-- `smoke_client.py`
-  - 터미널 기반 WebSocket smoke test 클라이언트
+- `smoke_client.py` — 터미널 smoke test (`bird-xai-ws-smoke`)
 
----
-
-### Smoke test
+## Smoke test
 
 ```bash
+uv run bird-xai-server &
 uv run bird-xai-ws-smoke
 ```
 
-테스트 순서:
-1. `WS /ws` 연결
-2. 초기 `frame` 수신 확인
-3. `controls.set` 전송 후 `applied_overrides`가 포함된 `frame` 수신 확인
-4. 연속 frame stream 확인
+기본 순서:
 
-옵션:
+1. `GET /wind-and-wish` HTML 검증
+2. (선택) negative `/wish` checks (`--with-negative`)
+3. WS connect → bootstrap frame
+4. `POST /wish` × flush threshold (default 10)
+5. frame stream에서 `applied_overrides.message_cnt` 확인
+6. 추가 frame stream (default 5 frames)
+
+### 옵션
 
 ```bash
-uv run bird-xai-ws-smoke --wind-speed 0.2 --wind-direction 0.1
-uv run bird-xai-ws-smoke --url ws://127.0.0.1:8000/ws --timeout 10
+# 로컬 (rate limit 회피 — CI와 동일)
+BIRD_XAI_WISH_RATE_LIMIT_SEC=0 uv run bird-xai-server &
+uv run bird-xai-ws-smoke --wish-interval 0
+
+# production-like rate limit
+uv run bird-xai-ws-smoke --wish-interval 5.1 --flush-threshold 10
+
+# WS only (wish 생략)
+uv run bird-xai-ws-smoke --no-with-wish --frames 10
+
+# negative checks 포함
+uv run bird-xai-ws-smoke --with-negative --wish-interval 0
 ```
+
+| 옵션 | 기본 | 설명 |
+|---|---|---|
+| `--base-url` | `http://127.0.0.1:8080` | HTTP base (`/wish`, `/health`) |
+| `--url` | (derived) | WS URL override |
+| `--timeout` | `600` | step timeout (초) |
+| `--frames` | `5` | wish 후 추가 frame 수 |
+| `--with-wish` / `--no-with-wish` | on | override 시나리오 |
+| `--with-negative` | off | 400/429 checks |
+| `--flush-threshold` | `10` | expected `message_cnt` |
+| `--wish-interval` | `0` | wish POST 간격 (CI: 0) |
+
+## CI
+
+GitHub Actions에서 smoke 실행 시 서버 env `BIRD_XAI_WISH_RATE_LIMIT_SEC=0` 권장.  
+artifacts cache → [docs/deploy.md](../docs/deploy.md)
+
+## 관련
+
+- 서버 API: [ai/server/README.md](../ai/server/README.md)
+- 배포: [docs/deploy.md](../docs/deploy.md)
