@@ -29,11 +29,10 @@ raw/
 ```
 
 ### `processed/`
-전처리 파이프라인이 생성한 학습용 산출물을 보관합니다.
-전체 파일은 용량 문제로 Git에 포함하지 않으며, 샘플 파일과 컬럼 명세는
-[processed/README.md](processed/README.md)를 참고하세요.
 
 전처리 산출물. inference·training이 직접 참조.
+
+**Git·Docker에 포함** (Railway 배포용): `preprocessed_geese_full.csv`, `feat_scaler.pkl`, `delta_scaler.pkl`. 샘플·컬럼 명세는 [processed/README.md](processed/README.md). checklist → [docs/deploy.md](../docs/deploy.md).
 
 | 파일 | 용도 |
 |---|---|
@@ -61,6 +60,14 @@ raw/
 |---------|-----|--------|------|------|
 | North Sea White-fronted Geese | Anser albifrons | 65마리 | 2014~2017 9~11월 | 전처리 완료 |
 
+## CLI
+
+| 명령 | 상태 |
+|---|---|
+| (loader) | `import ai.common` 시 `get_data_loader` — 학습·추론 공용 |
+| `bird-xai-preprocess` | entry만 등록 — `data/preprocess.py`는 [docs/unimplemented.md](../docs/unimplemented.md) B항 |
+
 ## 관련 디렉토리
+
 - 학습 코드: [ai/training/README.md](../ai/training/README.md)
 - 프로젝트 개요: [README.md](../README.md)

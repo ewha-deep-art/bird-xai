@@ -5,7 +5,6 @@
 ## 기획·팀
 
 - [project.md](./project.md) — 개요, 문제 정의, 기술 스택
-- [idea.md](./idea.md) — 핵심 개념·표현 의도
 - [implementation.md](./implementation.md) — XAI·데이터 처리 아이디어
 - [Related_Works.md](./Related_Works.md) — 관련 연구·레퍼런스
 - [Team_Ground_Rule.md](./Team_Ground_Rule.md) — 협업·리뷰 원칙
@@ -13,9 +12,9 @@
 
 ## 구현·운영 (repo truth 보조)
 
+- [self_demo.md](../self_demo.md) — 방문자용 직접 체험 가이드 (루트)
 - [unimplemented.md](./unimplemented.md) — 미구현·보류 레지스트리 (A/B/C/D)
 - [deploy.md](./deploy.md) — Railway·Docker·artifacts·CI
-- [server-queue-latency.md](./server-queue-latency.md) — frame 간격·queue refill·wish flush 근거
 
 ## 이미지
 

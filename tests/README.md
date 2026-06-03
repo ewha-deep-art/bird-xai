@@ -43,7 +43,7 @@ uv run bird-xai-ws-smoke --with-negative --wish-interval 0
 
 ## CI
 
-GHA: [`.github/workflows/smoke.yml`](../.github/workflows/smoke.yml) — 서버 env `BIRD_XAI_WISH_RATE_LIMIT_SEC=0` 권장. artifacts cache → [docs/deploy.md](../docs/deploy.md) (cache miss는 C항).
+GHA: [`.github/workflows/smoke.yml`](../.github/workflows/smoke.yml) — `BIRD_XAI_WISH_RATE_LIMIT_SEC=0`. artifacts 4종·cache seed → [docs/deploy.md](../docs/deploy.md) · [docs/unimplemented.md](../docs/unimplemented.md) C항.
 
 ## 관련
 

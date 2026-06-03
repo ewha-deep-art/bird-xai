@@ -15,7 +15,7 @@
 **전시 제약 (2026-06-01 확정)**  
 1달 이내 배포·운영. 과제 요건상 **단일 공개 URL** (WebGL 전시 + QR 관람 + API).
 
-마지막 갱신: 2026-06-02 (B항 `/wind-and-wish` QR 웹 구현 완료)
+마지막 갱신: 2026-06-03 (Railway production + Unity `render/`·`/ws` 클라이언트)
 
 ---
 
@@ -29,22 +29,21 @@
 
 | 항목 | 확정 사양 | 현재 gap |
 |---|---|---|
-| **Railway 1서비스 배포** | Railway 앱 1개 + repo `Dockerfile`. FastAPI가 API + 정적 serve. URL: `/` WebGL, `/wind-and-wish`, `/wish`, `/ws`, `/health` | Railway 프로젝트 미생성. WebGL `/` mount 없음. API Docker·runbook → [deploy.md](deploy.md) |
-| **Unity WebGL 전시** | `/` WebGL mount. 네이티브 Unity는 개발용 | WebGL 빌드·`/ws` 클라이언트 미구현 |
-| **장애 UX (degraded mode)** | WS 끊김 → **마지막 frame 1개 freeze**. WS **자동 재연결**(1→2→4→…s, max 30s). `/health` 폴링 없음 | WebGL 클라이언트 미구현 |
+| **장애 UX (degraded mode)** | WS 끊김 → **마지막 frame 1개 freeze**. WS **자동 재연결**(1→2→4→…s, max 30s). `/health` 폴링 없음 | `BirdDataManager` WS 수신 있음 — backoff·last-frame freeze 미구현 |
 | **`bird-xai-preprocess`** | 노트북 → Python 포팅, entry point 유지 | `data/preprocess.py` 없음 |
-| **Unity `render/` (monorepo)** | Unity → WebGL 빌드 산출 | C#·씬 없음 |
 
 ### 1서비스 URL 맵 (확정)
 
 ```text
-https://<railway-domain>/
-  /              Unity WebGL (전시)
-  /wind-and-wish   QR 관람 웹
-  /wish          POST JSON
-  /ws            WebSocket (wss://)
-  /health        GET
+https://bird-xai-production.up.railway.app/
+  /              v1: 전시 Unity(native) — production `/ws` 연결. Railway `/` WebGL mount 없음
+  /wind-and-wish   QR 관람 웹 — live
+  /wish          POST JSON — live
+  /ws            WebSocket (wss://) — live
+  /health        GET — live
 ```
+
+Unity: [`render/`](../render/) (C#·씬·VFX, `BirdDataManager` `/ws` 클라이언트). Production smoke: `uv run bird-xai-ws-smoke --base-url https://bird-xai-production.up.railway.app --url wss://bird-xai-production.up.railway.app/ws`
 
 ---
 
@@ -52,8 +51,7 @@ https://<railway-domain>/
 
 | 항목 | 확정된 것 | 열린 질문 |
 |---|---|---|
-| **Railway 배포 세부** | 1 Docker 서비스, free tier, `BIRD_XAI_*` env, Dockerfile·[deploy.md](deploy.md) runbook. **프로젝트 미생성**. v1 URL은 `*.up.railway.app` OK | custom domain(유료) 적용 시점, cold start·sleep, RAM/CPU 한도 실측 |
-| **전시 latency·운영** | 로컬: `build_queue` ~331s → 768 frames, dequeue 즉시. IG 유지 | Railway free tier에서 refill lag·cold start 허용 여부, `n_steps`/배치 추가 튜닝 필요 시 일정 |
+| **전시 latency·운영** | 로컬: `build_queue` ~331s → 768 frames, dequeue 즉시. IG 유지. Railway production live — [wind-and-wish](https://bird-xai-production.up.railway.app/wind-and-wish) | cold start·sleep·IG refill lag·RAM/CPU **실측** 남음. free tier 허용 여부, `n_steps`/배치 튜닝 필요 시 일정 |
 | **GHA artifacts cache** | [`.github/workflows/smoke.yml`](../.github/workflows/smoke.yml) + [deploy.md](deploy.md) CI 절 | self-hosted seed 1회 필요. cache miss 시 CI fail |
 
 ---
@@ -79,12 +77,16 @@ https://<railway-domain>/
 | `/wish` API | JSON body, 50자 | **구현 완료** (2026-06-02) |
 | `/wish` 운영 | 5s/IP, flush≥10, 본문 미저장 | **구현 완료** |
 | 데이터·가중치 | Docker COPY 번들 | **구현 완료** — [deploy.md](deploy.md) |
-| degraded 구현 | last 1 frame + WS backoff | /health 폴링 생략 |
+| degraded 구현 | last 1 frame + WS backoff | `BirdDataManager` WS 있음 — backoff·freeze는 B «장애 UX» |
 | UI/UX | 한국어·미니멀 | **구현 완료** — [`participate.html`](../ai/server/static/participate.html) |
 | 윈도우 narrative | v1 생략 | LSTM step=24를 「15분」으로 설명하는 전시 카피 — v1 미사용 |
 | XAI | IG 유지 | queue로 1s frame, refill ~5분 백그라운드 |
 | smoke·CI | wish 시나리오 + GHA | **구현 완료** — cache seed는 C항 |
 | 설문 | v1 제외 | — |
-| Railway URL | default OK, custom은 유료 시 | C 잔류 |
+| Railway URL | `bird-xai-production.up.railway.app` live | custom domain v1 생략(유료). cold start·lag 실측은 C «전시 latency·운영» |
+| Railway 1서비스 배포 | Docker·API·QR·env·runbook | **구현 완료** (2026-06-03) — [deploy.md](deploy.md) |
+| Unity `render/` | C#·씬·VFX·Boids | **구현 완료** (2026-06-03) — [`render/`](../render/) |
+| Unity `/ws` 클라이언트 | `BirdDataManager`, wss Railway | **구현 완료** (2026-06-03) |
+| Unity WebGL `/` mount | FastAPI StaticFiles | v1 생략 — 전시는 native Unity + production `/ws` |
 
 **로컬 벤치** (CPU): `build_queue` 331s, queue 768 frames, `build_frame_from_queue` 즉시.

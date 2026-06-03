@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "bird-xai"
 version = "0.1.0"
-description = "Bird XAI v1 contract-first migration pipeline"
+description = "철새 GPS·기후 데이터로 이동 경로를 예측하고, 순풍·역풍·날씨(XAI)를 색으로 보여 주며, 관람객 바람으로 전시가 바뀌는 인터랙티브 미디어아트"
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [

@@ -38,7 +38,7 @@ build_frame_from_queue() → FrameMessage
 | override batch | `message_cnt` flush 시 `build_queue`로 **pending queue** 생성 → 다음 dequeue 시 swap |
 | refill | 동일 `overrides`로 `build_queue` 후 기존 큐 **extend** |
 
-세부 latency·운영 튜닝 → [docs/server-queue-latency.md](../../docs/server-queue-latency.md)
+세부 latency·운영 → [docs/unimplemented.md](../../docs/unimplemented.md) C항, [docs/deploy.md](../../docs/deploy.md)
 
 ## Frame 출력
 

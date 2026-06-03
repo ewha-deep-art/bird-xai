@@ -7,9 +7,10 @@ Python 서버와 Unity 클라이언트가 공유하는 **WebSocket 계약** (`WS
 | 파일 | 설명 |
 |---|---|
 | `schemas/common.schema.json` | 공통 타입: `point`, `candidatePath`, `xaiResult`, `boidVelocity`, `boidAgent`, `attributionFeatureKey`, `overrideKey` |
-| `schemas/frame.schema.json` | 서버 → Unity: 예측 윈도우에서 잘린 1 프레임 |
+| `schemas/frame.schema.json` | 서버 → Unity (`WS /ws`): 예측 윈도우 1 frame |
 | `schemas/error.schema.json` | 서버 → Unity: 오류 메시지 |
-| `schemas/server-message.schema.json` | 서버 메시지 union (`frame` + `error`) |
+| `schemas/server-message.schema.json` | WS 서버 메시지 union (`frame` + `error`) |
+| `schemas/wish.schema.json` | HTTP `POST /wish` 요청·응답 (교차 검증용, 런타임은 `models.py`) |
 
 ## 예제 payload
 

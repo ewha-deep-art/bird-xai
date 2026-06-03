@@ -1,6 +1,8 @@
 # ai/
 
-Python AI 파이프라인: 학습 → 추론 → FastAPI 서버. Unity는 `render/`에서 WebSocket으로 frame을 수신합니다.
+Python AI 파이프라인: 학습 → 추론 → FastAPI 서버. Unity는 `render/`의 `BirdDataManager`가 `WS /ws`로 frame을 수신합니다.
+
+공개 체험 URL·관람 규칙(10회 flush 등)은 루트 [README.md](../README.md) · [self_demo.md](../self_demo.md).
 
 ## 흐름
 

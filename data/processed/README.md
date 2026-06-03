@@ -1,16 +1,21 @@
 # data/processed/
-전처리 파이프라인 산출물을 보관하는 디렉토리입니다.
-전체 파일은 용량 문제로 Git에 포함하지 않으며 Google Drive에서 관리합니다.
 
-> Google Drive 경로: `MyDrive/data/lstm_input_geese/`
-> 전처리 코드: [notebooks/BirdXAI_Geese_Preprocessing.ipynb](../notebooks/BirdXAI_Geese_Preprocessing.ipynb)
+전처리 파이프라인 산출물. 학습·추론·Docker COPY가 이 경로를 사용합니다.
 
-## 파일 목록
+## Git·런타임 (repo / Railway)
 
-| 파일명 | 크기 | 설명 |
-|--------|------|------|
-| `preprocessed_geese_full.csv` | ~수십MB | 최종 전처리 완료 파일 |
-| `preprocessed_geese_sample.csv` | 소용량 | 상위 100행 샘플 (구조 확인용) |
+| 파일 | Git | 용도 |
+|---|---|---|
+| `preprocessed_geese_full.csv` | 포함 (~74MB) | 학습·추론 dataset |
+| `feat_scaler.pkl` | 포함 | 입력 feature `MinMaxScaler` |
+| `delta_scaler.pkl` | 포함 | Δ target `StandardScaler` |
+| `preprocessed_geese_sample.csv` | 포함 | 상위 100행 샘플 (구조 확인) |
+
+확인: [docs/deploy.md](../../docs/deploy.md). 재생성·원본은 Google Drive + 노트북 — 아래.
+
+> Google Drive: `MyDrive/data/lstm_input_geese/`  
+> 전처리 노트북: [notebooks/BirdXAI_Geese_Preprocessing.ipynb](../notebooks/BirdXAI_Geese_Preprocessing.ipynb)  
+> Python CLI `bird-xai-preprocess`: [docs/unimplemented.md](../../docs/unimplemented.md) B항
 
 ## 데이터 개요
 

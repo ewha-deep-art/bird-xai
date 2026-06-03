@@ -91,9 +91,20 @@ uv run bird-xai-server
 | `rate_limit.py` | IP rate limit (`limits`) |
 | `static/participate.html` | QR 관람 웹 |
 
+## Production (Railway)
+
+| 경로 | URL |
+|---|---|
+| 관람 | https://bird-xai-production.up.railway.app/wind-and-wish |
+| `POST /wish` | 동일 host `/wish` |
+| `WS /ws` | `wss://bird-xai-production.up.railway.app/ws` |
+| `GET /health` | `/health` |
+
+URL 맵·WebGL 미mount: [docs/unimplemented.md](../../docs/unimplemented.md) B절.
+
 ## 배포·검증
 
-- Runbook: [docs/deploy.md](../../docs/deploy.md)
+- Runbook: [docs/deploy.md](../../docs/deploy.md) — Docker, artifacts, GHA cache
 - Smoke: [tests/README.md](../../tests/README.md) — CI에서는 `BIRD_XAI_WISH_RATE_LIMIT_SEC=0` 권장
 
 ## 관련

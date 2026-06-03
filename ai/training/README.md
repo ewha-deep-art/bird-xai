@@ -55,4 +55,6 @@ model = load_model_with_state()
   - `ai/training/model/weights/bird_best.pt` — `train.py` 최종 가중치 (`MODEL_SAVE_PATH`)
   - `data/processed/*.pkl` — `loader.py` normalize 시 갱신 (import `ai.common` 시에도 fit)
 
-데이터 전처리와 데이터로더 관련 내용은 [data/README.md](../../data/README.md), 추론 관련 내용은 [../inference/README.md](../inference/README.md)를 참고하세요.
+배포용 가중치 경로·artifact checklist: [docs/deploy.md](../../docs/deploy.md).
+
+데이터 전처리와 데이터로더: [data/README.md](../../data/README.md). 추론: [../inference/README.md](../inference/README.md).
