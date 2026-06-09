@@ -71,7 +71,14 @@ class ServerService:
 
                 pending_build_task = asyncio.create_task(extend_queue())
 
-            yield pipeline.build_frame_from_queue()
+            frame = pipeline.build_frame_from_queue()
+            if frame is None:
+                if pending_build_task is not None and not pending_build_task.done():
+                    await pending_build_task
+                else:
+                    await asyncio.sleep(0.01)
+                continue
+            yield frame
 
     def update_overrides(self) -> None:
         self.message_counter += 1

@@ -120,10 +120,13 @@ class BirdPipeline:
             queue_items.append((point, xai_results[k]))
         return deque(queue_items)
 
-    def build_frame_from_queue(self) -> FrameMessage:
+    def build_frame_from_queue(self) -> FrameMessage | None:
         if self._pending_queue is not None:
             self._queue = self._pending_queue
             self._pending_queue = None
+
+        if not self._queue:
+            return None
 
         position, xai_result = self._queue.popleft()
         return FrameMessage(
