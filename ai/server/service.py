@@ -78,6 +78,7 @@ class ServerService:
                 else:
                     await asyncio.sleep(0.01)
                 continue
+            frame.wish_count = self.message_counter
             yield frame
 
     def update_overrides(self) -> None:

@@ -68,6 +68,7 @@ class FrameMessage(BaseModel):
     xai: XaiResult
     boids: list[BoidAgent] | None = None
     applied_overrides: dict[OverrideKey, int] | None = None  # type: ignore[valid-type]
+    wish_count: int = 0
 
 
 class ErrorMessage(BaseModel):
