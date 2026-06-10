@@ -9,7 +9,7 @@
 
 | 어디서 | 링크 |
 | --- | --- |
-| **벽면·큰 화면** (전시) | [https://ewha-deep-art.github.io/bird-xai/](https://github.com/ewha-deep-art/bird-xai/releases) |
+| **벽면·큰 화면** (전시) | [https://github.com/ewha-deep-art/bird-xai/releases |
 | **스마트폰** (관람, 전시장 QR과 같음) | https://bird-xai-production.up.railway.app/wind-and-wish |
 
 ---
@@ -18,8 +18,9 @@
 
 ### ① 큰 화면 켜기
 
-1. PC·태블릿·TV에 **전시** 링크를 연다.
-2. **빛나는 점들(철새 무리)이 움직이면** 준비 완료.
+1. GitHub Releases 페이지에서 build.zip 파일을 내려받고, 압축을 해제한다
+2. PC·태블릿·TV에서 render.exe 파일을 연다.
+3. **빛나는 점들(철새 무리)이 움직이면** 준비 완료.
 
 > 큰 화면은 **보기만** 하면 됩니다. 여기서는 글을 쓰지 않습니다.
 - 창이 열리고 5초 동안은 큐를 쌓기 위해 가만히 멈춰 있으니 기다려 주시면 됩니다.
