@@ -9,7 +9,7 @@
 
 | 어디서 | 링크 |
 | --- | --- |
-| **벽면·큰 화면** (전시) | https://ewha-deep-art.github.io/bird-xai/ |
+| **벽면·큰 화면** (전시) | [https://ewha-deep-art.github.io/bird-xai/](https://github.com/ewha-deep-art/bird-xai/releases) |
 | **스마트폰** (관람, 전시장 QR과 같음) | https://bird-xai-production.up.railway.app/wind-and-wish |
 
 ---
