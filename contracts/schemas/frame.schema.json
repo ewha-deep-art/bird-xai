@@ -41,7 +41,8 @@
         },
         { "type": "null" }
       ]
-    }
+    },
+    "wish_count": { "type": "integer" }
   },
   "required": ["schema_version", "message_type", "position", "predicted_path", "candidates", "xai"],
   "additionalProperties": false
