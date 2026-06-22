@@ -1,5 +1,7 @@
 # Bird XAI
 
+![idea preview](docs/idea_v2.png)
+
 철새 GPS·기후 데이터로 **다음 비행 경로**를 예측하고, Captum Integrated Gradients(IG)로 **순풍·역풍·날씨가 경로에 미친 영향**을 색으로 보여 주는 인터랙티브 미디어아트입니다.  
 관람객은 스마트폰에서 「바람」을 보내고, 벽면 전시 화면에서 무리의 이동과 색 변화를 봅니다.
 
@@ -45,6 +47,16 @@
 
 ## 개발자·기여자
 
+### 팀원별 역할
+
+팀번호 18 · 팀명 디바트(deep-art) · 지도교수 박현석 · 트랙 연구
+
+| 이름 | GitHub | 역할 |
+|---|---|---|
+| 최현서 | [@hyunddol2](https://github.com/hyunddol2) | 팀장 · 데이터 수집 및 전처리 |
+| 김나경 | [@4rldur0](https://github.com/4rldur0) | 모델 학습 · 추론 · 서버 |
+| 이나겸 | [@nagyeom](https://github.com/nagyeom) | Unity 렌더 |
+
 ### 프로젝트 흐름
 
 1. **학습** — `data/processed` + LSTM direct multi-step forecast  
@@ -62,10 +74,18 @@ Movebank GPS + ERA5
 
 ### 스택
 
-- 데이터: Movebank, ERA5  
+- 데이터: Movebank(흰이마기러기 65마리, 2014~2017), ERA5 기압면 기상  
 - AI: Python (`PyTorch`, `captum`)  
 - 서버: FastAPI, WebSocket  
 - 렌더: Unity 2022 LTS (`render/`, VFX·Boids)  
+
+### 모델·실험
+
+- 입력: 과거 24 step(8개 변수) → 출력: 미래 12 step Δ(변화량) 예측  
+- 실험 3회로 최종 모델 확정: ①절대좌표 예측(경로 점프 실패) → ②기상만 입력(미이동 수렴 실패) → ③위치+기상 8변수 채택  
+- 성능: 위도 RMSE 0.42° · 경도 RMSE 0.78° · 고도 RMSE 78 m  
+- XAI(IG) 3키: 순풍(tailwind) · 역풍(headwind) · 대기 불안정성(weather_key)  
+- 인터랙션 반영 평균 3.6초 (Producer/Consumer 큐 배치 계산)  
 
 ### 디렉토리
 

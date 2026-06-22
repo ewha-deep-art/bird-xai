@@ -34,6 +34,10 @@ ai/training/model/weights/*
 !ai/training/model/weights/bird_best.pt
 *.ckpt
 
+# 루트 임시 산출물 (실험 CSV·메모) — 실수 커밋 방지
+/pred_*.csv
+/true_*.csv
+
 # Jupyter
 .ipynb_checkpoints/
 *.ipynb
