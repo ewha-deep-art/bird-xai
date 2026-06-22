@@ -54,8 +54,8 @@
 | 이름 | GitHub | 역할 |
 |---|---|---|
 | 최현서 | [@hyunddol2](https://github.com/hyunddol2) | 팀장 · 데이터 수집 및 전처리 |
-| 김나경 | [@4rldur0](https://github.com/4rldur0) | 모델 학습 · 추론 · 서버 |
-| 이나겸 | [@nagyeom](https://github.com/nagyeom) | Unity 렌더 |
+| 김나경 | [@4rldur0](https://github.com/4rldur0)([@nagyeop](https://github.com/nagyeop)) | 모델 학습 · 추론 · 서버 |
+| 이나겸 | [@nagyeom0708-a11y](https://github.com/nagyeom0708-a11y) | Unity 렌더 |
 
 ### 프로젝트 흐름
 
