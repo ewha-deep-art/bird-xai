@@ -1,6 +1,6 @@
 # Bird XAI
 
-![idea preview](docs/idea_v2.png)
+<img width="1212" height="681" alt="image" src="https://github.com/user-attachments/assets/507814c7-6d26-479a-aaf2-da09e0b34e89" />
 
 철새 GPS·기후 데이터로 **다음 비행 경로**를 예측하고, Captum Integrated Gradients(IG)로 **순풍·역풍·날씨가 경로에 미친 영향**을 색으로 보여 주는 인터랙티브 미디어아트입니다.  
 관람객은 스마트폰에서 「바람」을 보내고, 벽면 전시 화면에서 무리의 이동과 색 변화를 봅니다.
